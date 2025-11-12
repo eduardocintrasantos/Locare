@@ -1,19 +1,42 @@
 name: locare
-description: "A new Flutter project."
-publish_to: 'none'
-version: 0.1.0
+description: MVP offline-first de gestão de casas e aluguéis.
+publish_to: "none"
+version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.0
+  sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
   flutter:
     sdk: flutter
 
+  # UI
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.19.0
+
+  # Navegação
+  go_router: ^14.2.0
+
+  # Estado
+  flutter_riverpod: ^2.5.1
+
+  # Validação
+  formz: ^0.6.1
+
+  # Banco local
+  isar: ^3.1.0+1
+  isar_flutter_libs: ^3.1.0+1
+  path_provider: ^2.1.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^4.0.0
+
+  # Geração de código do Isar
+  build_runner: ^2.4.12
+  isar_generator: ^3.1.0+1
 
 flutter:
   uses-material-design: true
