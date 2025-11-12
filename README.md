@@ -1,2 +1,3 @@
-# Locare
-Aplicativos de controle de casas e aluguéis
+# locare
+
+A new Flutter project.
