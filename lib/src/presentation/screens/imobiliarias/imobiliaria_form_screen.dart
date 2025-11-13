@@ -6,7 +6,6 @@ import '../../../domain/entities/imobiliaria.dart';
 import '../../../presentation/providers/imobiliaria_providers.dart';
 import '../../../core/formz_inputs/non_empty_input.dart';
 import '../../../core/utils/id.dart';
-import '../../../domain/repositories/imobiliaria_repo.dart';
 import '../../providers/_repos_provider.dart';
 
 class ImobiliariaFormScreen extends ConsumerStatefulWidget {
@@ -103,17 +102,26 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
             FilledButton.icon(
               onPressed: saving ? null : () async {
                 if (!_formKey.currentState!.validate()) return;
-                final m = (_loaded ?? Imobiliaria()..id = widget.id ?? 0)
-                  ..nome = nome.value.trim()
-                  ..cnpj = cnpjCtrl.text.trim().isEmpty ? null : cnpjCtrl.text.trim()
-                  ..rua = ruaCtrl.text.trim().isEmpty ? null : ruaCtrl.text.trim()
-                  ..cep = cepCtrl.text.trim().isEmpty ? null : cepCtrl.text.trim()
-                  ..bairro = bairroCtrl.text.trim().isEmpty ? null : bairroCtrl.text.trim()
-                  ..numero = numeroCtrl.text.trim().isEmpty ? null : numeroCtrl.text.trim()
-                  ..telefone = telCtrl.text.trim().isEmpty ? null : telCtrl.text.trim()
-                  ..nomeContato = contatoCtrl.text.trim().isEmpty ? null : contatoCtrl.text.trim();
-                await ref.read(imobiliariaActionsProvider.notifier).save(m);
-                if (mounted) Navigator.pop(context);
+                try {
+                  // Se é novo cadastro, não seta ID (Isar.autoIncrement cuida disso)
+                  final m = (_loaded ?? Imobiliaria())
+                    ..nome = nome.value.trim()
+                    ..cnpj = cnpjCtrl.text.trim().isEmpty ? null : cnpjCtrl.text.trim()
+                    ..rua = ruaCtrl.text.trim().isEmpty ? null : ruaCtrl.text.trim()
+                    ..cep = cepCtrl.text.trim().isEmpty ? null : cepCtrl.text.trim()
+                    ..bairro = bairroCtrl.text.trim().isEmpty ? null : bairroCtrl.text.trim()
+                    ..numero = numeroCtrl.text.trim().isEmpty ? null : numeroCtrl.text.trim()
+                    ..telefone = telCtrl.text.trim().isEmpty ? null : telCtrl.text.trim()
+                    ..nomeContato = contatoCtrl.text.trim().isEmpty ? null : contatoCtrl.text.trim();
+                  await ref.read(imobiliariaActionsProvider.notifier).save(m);
+                  if (mounted) Navigator.pop(context);
+                } catch (e) {
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Erro ao salvar: $e')),
+                    );
+                  }
+                }
               },
               icon: const Icon(Icons.save_outlined),
               label: const Text('Salvar'),

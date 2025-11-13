@@ -21,4 +21,7 @@ class MoneyInput extends FormzInput<String, MoneyError> {
     if (parsed == null || parsed < 0) return MoneyError.invalid;
     return null;
   }
+
+  bool get valid => validator(value) == null;
+  bool get invalid => !valid;
 }

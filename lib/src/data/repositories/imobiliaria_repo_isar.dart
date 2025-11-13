@@ -26,7 +26,15 @@ class ImobiliariaRepoIsar implements ImobiliariaRepo {
   Future<int> upsert(Imobiliaria model) async {
     final isar = await source.db;
     final now = DateTime.now();
-    model.id == 0 ? model.createdAt = now : model.updatedAt = now;
+    
+    // Se é novo (sem ID ou ID 0), inicializa createdAt
+    if (model.id == 0 || model.id == Isar.autoIncrement) {
+      model.createdAt = now;
+    } else {
+      // Se é edição, só atualiza updatedAt se já existe createdAt
+      model.updatedAt = now;
+    }
+    
     return isar.writeTxn(() => isar.imobiliarias.put(model));
   }
 

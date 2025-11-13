@@ -3,6 +3,7 @@
 
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../domain/entities/imobiliaria.dart';
 import '../../domain/entities/casa.dart';
@@ -30,7 +31,8 @@ class IsarDb {
         PagamentoSchema,
       ],
       directory: dir.path,
-      inspector: false,
+      // habilita o inspector apenas em debug (não em release/profile)
+      inspector: kDebugMode,
     );
   }
 }

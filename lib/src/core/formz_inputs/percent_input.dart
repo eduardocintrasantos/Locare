@@ -21,4 +21,7 @@ class PercentInput extends FormzInput<String, PercentError> {
     if (parsed == null || parsed < 0 || parsed > 100) return PercentError.invalid;
     return null;
   }
+
+  bool get valid => validator(value) == null;
+  bool get invalid => !valid;
 }

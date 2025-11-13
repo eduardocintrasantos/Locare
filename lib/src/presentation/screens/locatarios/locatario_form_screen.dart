@@ -6,7 +6,6 @@ import '../../../domain/entities/locatario.dart';
 import '../../../core/formz_inputs/non_empty_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/locatario_providers.dart';
-import '../../../domain/repositories/locatario_repo.dart';
 import '../../providers/_repos_provider.dart';
 
 class LocatarioFormScreen extends ConsumerStatefulWidget {
@@ -115,7 +114,7 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
             FilledButton.icon(
               onPressed: saving ? null : () async {
                 if (!_formKey.currentState!.validate()) return;
-                final m = (_loaded ?? Locatario()..id = widget.id ?? 0)
+                final m = (_loaded ?? Locatario())
                   ..nome = nome.value.trim()
                   ..cpf = cpfCtrl.text.trim().isEmpty ? null : cpfCtrl.text.trim()
                   ..rg = rgCtrl.text.trim().isEmpty ? null : rgCtrl.text.trim()

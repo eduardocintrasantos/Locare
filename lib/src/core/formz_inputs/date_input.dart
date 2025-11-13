@@ -27,4 +27,7 @@ class DateInput extends FormzInput<String, DateError> {
       return DateError.invalid;
     }
   }
+
+  bool get valid => validator(value) == null;
+  bool get invalid => !valid;
 }

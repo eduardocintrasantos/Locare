@@ -13,4 +13,7 @@ class NonEmptyInput extends FormzInput<String, NonEmptyError> {
   NonEmptyError? validator(String value) {
     return value.trim().isEmpty ? NonEmptyError.empty : null;
   }
+
+  bool get valid => validator(value) == null;
+  bool get invalid => !valid;
 }

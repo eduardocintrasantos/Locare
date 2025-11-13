@@ -12,12 +12,12 @@ Future<bool> confirmDialog(
 }) async {
   final r = await showDialog<bool>(
     context: context,
-    builder: (_) => AlertDialog(
+    builder: (dialogContext) => AlertDialog(
       title: Text(title),
       content: Text(message),
       actions: [
-        TextButton(onPressed: () => Navigator.pop(context, false), child: Text(cancelText)),
-        FilledButton(onPressed: () => Navigator.pop(context, true), child: Text(okText)),
+        TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: Text(cancelText)),
+        FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: Text(okText)),
       ],
     ),
   );

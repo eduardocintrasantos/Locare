@@ -17,7 +17,6 @@ import '../../../core/formz_inputs/date_input.dart';
 import '../../../core/formz_inputs/money_input.dart';
 import '../../../core/formz_inputs/percent_input.dart';
 import '../../../core/utils/id.dart';
-import '../../../domain/repositories/vinculo_repo.dart';
 import '../../providers/_repos_provider.dart';
 
 class VinculoFormScreen extends ConsumerStatefulWidget {
@@ -61,9 +60,10 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
         casaId = v.casaId;
         imobiliariaId = v.imobiliariaId;
         locatarioId = v.locatarioId;
-        valorAluguel = MoneyInput.dirty(NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(v.valorAluguel ?? 0));
+        // Formata valores monetários sem símbolos (apenas número com vírgula/ponto)
+        valorAluguel = MoneyInput.dirty((v.valorAluguel ?? 0).toStringAsFixed(2).replaceAll('.', ','));
         taxaPercent  = PercentInput.dirty((v.taxaPercent ?? 0).toStringAsFixed(2));
-        taxaValor    = MoneyInput.dirty(NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(v.taxaValor ?? 0));
+        taxaValor    = MoneyInput.dirty((v.taxaValor ?? 0).toStringAsFixed(2).replaceAll('.', ','));
         inicio = DateInput.dirty(DateFormat('dd/MM/yyyy').format(v.inicio));
         fim    = DateInput.dirty(v.fim == null ? '' : DateFormat('dd/MM/yyyy').format(v.fim!));
       }
@@ -71,6 +71,19 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
   }
 
   bool get _readOnly => _loaded?.fim != null;
+
+  /// Formata automaticamente data: "01012025" vira "01/01/2025"
+  String _formatDate(String input) {
+    input = input.replaceAll(RegExp(r'[^0-9]'), ''); // remove tudo que não é número
+    if (input.length > 8) input = input.substring(0, 8); // máximo 8 dígitos
+    if (input.length >= 2) {
+      input = input.replaceRange(2, 2, '/');
+    }
+    if (input.length >= 5) {
+      input = input.replaceRange(5, 5, '/');
+    }
+    return input;
+  }
 
   void _recalcularTaxas({bool preferValor = false}) {
     final alug = valorAluguel.asNum.toDouble();
@@ -91,7 +104,35 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
     final casas = ref.watch(casasListProvider).value ?? [];
     final imobs = ref.watch(imobiliariasListProvider).value ?? [];
     final locs  = ref.watch(locatariosListProvider).value ?? [];
+    final vinculos = ref.watch(vinculosListProvider).value ?? [];
     final saving = ref.watch(vinculoActionsProvider).isLoading;
+
+    // IDs de casas e locatários com vínculos ATIVOS (fim = null)
+    final casasComVinculoAtivo = <int>{};
+    final locatariosComVinculoAtivo = <int>{};
+    
+    for (final v in vinculos) {
+      if (v.fim == null) { // vínculo ativo
+        casasComVinculoAtivo.add(v.casaId);
+        locatariosComVinculoAtivo.add(v.locatarioId);
+      }
+    }
+
+    // Filtra casas e locatários disponíveis (sem vínculo ativo)
+    final casasDisponivel = casas.where((c) => !casasComVinculoAtivo.contains(c.id)).toList();
+    final locsDisponivel = locs.where((l) => !locatariosComVinculoAtivo.contains(l.id)).toList();
+    
+    // Se estiver editando, sempre permite a casa e locatário atuais
+    if (_loaded != null) {
+      if (!casasDisponivel.any((c) => c.id == casaId)) {
+        final casa = casas.firstWhere((c) => c.id == casaId, orElse: () => Casa()..id=0);
+        if (casa.id != 0) casasDisponivel.add(casa);
+      }
+      if (!locsDisponivel.any((l) => l.id == locatarioId)) {
+        final loc = locs.firstWhere((l) => l.id == locatarioId, orElse: () => Locatario()..id=0);
+        if (loc.id != 0) locsDisponivel.add(loc);
+      }
+    }
 
     Widget _infoCasa() {
       final c = casas.firstWhere((e) => e.id == casaId, orElse: () => Casa()..descricao='-');
@@ -151,7 +192,7 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                       child: DropdownButtonFormField<int>(
                         decoration: const InputDecoration(labelText: 'Casa *'),
                         value: casaId,
-                        items: casas.map((c) => DropdownMenuItem(value: c.id, child: Text(c.descricao))).toList(),
+                        items: casasDisponivel.map((c) => DropdownMenuItem(value: c.id, child: Text(c.descricao))).toList(),
                         onChanged: (v) => setState(() => casaId = v),
                         validator: (v) => v == null ? 'Obrigatório' : null,
                       ),
@@ -179,7 +220,7 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                       child: DropdownButtonFormField<int>(
                         decoration: const InputDecoration(labelText: 'Locatário *'),
                         value: locatarioId,
-                        items: locs.map((l) => DropdownMenuItem(value: l.id, child: Text(l.nome))).toList(),
+                        items: locsDisponivel.map((l) => DropdownMenuItem(value: l.id, child: Text(l.nome))).toList(),
                         onChanged: (v) => setState(() => locatarioId = v),
                         validator: (v) => v == null ? 'Obrigatório' : null,
                       ),
@@ -189,7 +230,7 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                 ),
                 const Divider(height: 24),
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Valor do aluguel (R$) *'),
+                  decoration: const InputDecoration(labelText: 'Valor do aluguel (R\$) *'),
                   initialValue: valorAluguel.value,
                   onChanged: (v) {
                     setState(() => valorAluguel = MoneyInput.dirty(v));
@@ -232,7 +273,10 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                       child: TextFormField(
                         decoration: const InputDecoration(labelText: 'Início (dd/MM/yyyy) *'),
                         initialValue: inicio.value,
-                        onChanged: (v) => setState(() => inicio = DateInput.dirty(v)),
+                        onChanged: (v) {
+                          final formatted = _formatDate(v);
+                          setState(() => inicio = DateInput.dirty(formatted));
+                        },
                         validator: (_) => inicio.invalid ? 'Data inválida' : null,
                         keyboardType: TextInputType.datetime,
                       ),
@@ -242,7 +286,10 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                       child: TextFormField(
                         decoration: const InputDecoration(labelText: 'Fim (opcional)'),
                         initialValue: fim.value,
-                        onChanged: (v) => setState(() => fim = DateInput.dirty(v)),
+                        onChanged: (v) {
+                          final formatted = _formatDate(v);
+                          setState(() => fim = DateInput.dirty(formatted));
+                        },
                         keyboardType: TextInputType.datetime,
                       ),
                     ),
@@ -253,19 +300,26 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                   onPressed: saving ? null : () async {
                     if (!_formKey.currentState!.validate()) return;
                     if (casaId == null || imobiliariaId == null || locatarioId == null) return;
+                    try {
+                      final v = (_loaded ?? Vinculo())
+                        ..casaId = casaId!
+                        ..imobiliariaId = imobiliariaId!
+                        ..locatarioId = locatarioId!
+                        ..valorAluguel = valorAluguel.asNum.toDouble()
+                        ..taxaPercent = taxaPercent.asNum.toDouble()
+                        ..taxaValor = taxaValor.asNum.toDouble()
+                        ..inicio = inicio.asDate!
+                        ..fim = (fim.value.trim().isEmpty) ? null : fim.asDate;
 
-                    final v = (_loaded ?? Vinculo()..id = widget.id ?? 0)
-                      ..casaId = casaId!
-                      ..imobiliariaId = imobiliariaId!
-                      ..locatarioId = locatarioId!
-                      ..valorAluguel = valorAluguel.asNum.toDouble()
-                      ..taxaPercent = taxaPercent.asNum.toDouble()
-                      ..taxaValor = taxaValor.asNum.toDouble()
-                      ..inicio = inicio.asDate!
-                      ..fim = (fim.value.trim().isEmpty) ? null : fim.asDate;
-
-                    await ref.read(vinculoActionsProvider.notifier).save(v);
-                    if (mounted) Navigator.pop(context);
+                      await ref.read(vinculoActionsProvider.notifier).save(v);
+                      if (mounted) Navigator.pop(context);
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Erro ao salvar: $e')),
+                        );
+                      }
+                    }
                   },
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('Salvar'),

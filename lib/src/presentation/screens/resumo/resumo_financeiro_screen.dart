@@ -97,13 +97,21 @@ class ResumoFinanceiroScreen extends ConsumerWidget {
                   value: it.recebido,
                   onChanged: (to) async {
                     final ok = await confirmDialog(
-                      _,
+                      context,
                       title: to ? 'Confirmar recebimento?' : 'Estornar recebimento?',
                       message: to ? 'Marcar como recebido?' : 'Marcar como não recebido?',
                     );
                     if (!ok) return;
-                    await ref.read(resumoActionsProvider.notifier)
-                        .toggle(it.vinculo.id, filtro.ano, filtro.mes, to);
+                    try {
+                      await ref.read(resumoActionsProvider.notifier)
+                          .toggle(it.vinculo.id, filtro.ano, filtro.mes, to);
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Erro: $e')),
+                        );
+                      }
+                    }
                   },
                 ),
               );

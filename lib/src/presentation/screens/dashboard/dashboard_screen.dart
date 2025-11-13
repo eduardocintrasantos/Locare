@@ -23,70 +23,82 @@ class DashboardScreen extends ConsumerWidget {
     String imobName(int id) => imobs.firstWhere((i) => i.id == id, orElse: () => Imobiliaria()..nome='?').nome;
     String locName (int id) => locs.firstWhere((l) => l.id == id, orElse: () => Locatario()..nome='?').nome;
 
+    Future<void> _onRefresh() async {
+      // Invalida todos os providers do dashboard para recarregar
+      ref.invalidate(dashboardResumoMesProvider);
+      ref.invalidate(dashboardUltimos12Provider);
+      ref.invalidate(imobiliariasListProvider);
+      ref.invalidate(locatariosListProvider);
+      // Aguarda um dos providers recarregar
+      await ref.refresh(dashboardResumoMesProvider.future);
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Início')),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          resumo.when(
-            data: (r) {
-              final perc = r.totalPrevisto == 0 ? 0 : (r.totalRecebido / r.totalPrevisto);
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Mês atual', style: Theme.of(context).textTheme.titleLarge),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(child: _numberCard('Previsto', formatMoney(r.totalPrevisto))),
-                      const SizedBox(width: 8),
-                      Expanded(child: _numberCard('Recebido', formatMoney(r.totalRecebido))),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  _bar('Progresso', perc.toDouble()),
-                  const SizedBox(height: 16),
-                  Text('Inadimplência por imobiliária', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  ...r.inadPorImobiliaria.entries.map((e) {
-                    final v = e.value;
-                    final p = r.totalPrevisto == 0 ? 0 : v / r.totalPrevisto;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(child: Text(imobName(e.key))),
-                          SizedBox(width: 120, child: _miniBar(p.toDouble())),
-                          const SizedBox(width: 8),
-                          Text(formatMoney(v)),
-                        ],
-                      ),
-                    );
-                  }),
-                  const SizedBox(height: 16),
-                  Text('Inadimplência por locatário', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 4),
-                  ...r.inadPorLocatario.entries.map((e) {
-                    final v = e.value;
-                    final p = r.totalPrevisto == 0 ? 0 : v / r.totalPrevisto;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          Expanded(child: Text(locName(e.key))),
-                          SizedBox(width: 120, child: _miniBar(p.toDouble())),
-                          const SizedBox(width: 8),
-                          Text(formatMoney(v)),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, _) => Text('Erro: $e'),
-          ),
+      body: RefreshIndicator(
+        onRefresh: _onRefresh,
+        child: ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            resumo.when(
+              data: (r) {
+                final perc = r.totalPrevisto == 0 ? 0 : (r.totalRecebido / r.totalPrevisto);
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Mês atual', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(child: _numberCard('Previsto', formatMoney(r.totalPrevisto))),
+                        const SizedBox(width: 8),
+                        Expanded(child: _numberCard('Recebido', formatMoney(r.totalRecebido))),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _bar('Progresso', perc.toDouble()),
+                    const SizedBox(height: 16),
+                    Text('Inadimplência por imobiliária', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    ...r.inadPorImobiliaria.entries.map((e) {
+                      final v = e.value;
+                      final p = r.totalPrevisto == 0 ? 0 : v / r.totalPrevisto;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(imobName(e.key))),
+                            SizedBox(width: 120, child: _miniBar(p.toDouble())),
+                            const SizedBox(width: 8),
+                            Text(formatMoney(v)),
+                          ],
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 16),
+                    Text('Inadimplência por locatário', style: Theme.of(context).textTheme.titleMedium),
+                    const SizedBox(height: 4),
+                    ...r.inadPorLocatario.entries.map((e) {
+                      final v = e.value;
+                      final p = r.totalPrevisto == 0 ? 0 : v / r.totalPrevisto;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(child: Text(locName(e.key))),
+                            SizedBox(width: 120, child: _miniBar(p.toDouble())),
+                            const SizedBox(width: 8),
+                            Text(formatMoney(v)),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Text('Erro: $e'),
+            ),
           const SizedBox(height: 24),
           Text('Últimos 12 meses (taxas)', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 8),
@@ -116,7 +128,8 @@ class DashboardScreen extends ConsumerWidget {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, _) => Text('Erro: $e'),
           ),
-        ],
+          ],
+        ),
       ),
     );
   }

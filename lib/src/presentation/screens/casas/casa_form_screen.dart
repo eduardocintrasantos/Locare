@@ -8,7 +8,6 @@ import '../../../core/formz_inputs/non_empty_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/casa_providers.dart';
 import '../../providers/imobiliaria_providers.dart';
-import '../../../domain/repositories/casa_repo.dart';
 import '../../../presentation/providers/_repos_provider.dart';
 
 class CasaFormScreen extends ConsumerStatefulWidget {
@@ -99,7 +98,7 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
             FilledButton.icon(
               onPressed: saving ? null : () async {
                 if (!_formKey.currentState!.validate()) return;
-                final m = (_loaded ?? Casa()..id = widget.id ?? 0)
+                final m = (_loaded ?? Casa())
                   ..descricao = descricao.value.trim()
                   ..rua = ruaCtrl.text.trim().isEmpty ? null : ruaCtrl.text.trim()
                   ..numero = numeroCtrl.text.trim().isEmpty ? null : numeroCtrl.text.trim()

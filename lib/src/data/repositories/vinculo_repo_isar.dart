@@ -18,27 +18,21 @@ class VinculoRepoIsar implements VinculoRepo {
   }) async {
     final isar = await source.db;
 
-    // 1) Começa no where() para habilitar sortBy...
-    final base = isar.vinculos.where().sortByInicioDesc();
+    // Se houver filtros, comece com `filter()` (permite encadear os filtros
+    // e depois chamar `sortByInicioDesc()`); caso contrário use `where()`.
+    if (casaId != null || imobiliariaId != null || locatarioId != null || apenasAtivos == true) {
+      final q0 = isar.vinculos.filter();
+      final q1 = (casaId != null) ? q0.casaIdEqualTo(casaId) : q0;
+      final q2 = (imobiliariaId != null) ? q1.imobiliariaIdEqualTo(imobiliariaId) : q1;
+      final q3 = (locatarioId != null) ? q2.locatarioIdEqualTo(locatarioId) : q2;
+      final q4 = (apenasAtivos == true) ? q3.fimIsNull() : q3;
 
-    // 2) Entra no filter() e aplica os filtros opcionais
-    var f = base.filter();
-
-    if (casaId != null) {
-      f = f.casaIdEqualTo(casaId);
-    }
-    if (imobiliariaId != null) {
-      f = f.imobiliariaIdEqualTo(imobiliariaId);
-    }
-    if (locatarioId != null) {
-      f = f.locatarioIdEqualTo(locatarioId);
-    }
-    if (apenasAtivos == true) {
-      f = f.fimIsNull();
+      final result = await (q4 as dynamic).findAll();
+      result.sort((a, b) => b.inicio.compareTo(a.inicio));
+      return result;
     }
 
-    // 3) Executa
-    return f.findAll();
+    return isar.vinculos.where().sortByInicioDesc().findAll();
   }
 
   @override
@@ -53,13 +47,8 @@ class VinculoRepoIsar implements VinculoRepo {
     final now = DateTime.now();
 
     return isar.writeTxn(() async {
-      if (model.id != 0) {
-        final atual = await isar.vinculos.get(model.id);
-        // Finalizado => somente leitura
-        if (atual != null && atual.fim != null) return atual.id;
-        model.updatedAt = now;
-        return isar.vinculos.put(model);
-      } else {
+      // Se é novo registro (id = 0 ou autoIncrement)
+      if (model.id == 0 || model.id == Isar.autoIncrement) {
         model.createdAt = now;
 
         // Finaliza vínculos ativos da mesma casa
@@ -77,6 +66,13 @@ class VinculoRepoIsar implements VinculoRepo {
           await isar.vinculos.put(v);
         }
 
+        return isar.vinculos.put(model);
+      } else {
+        // Se é edição
+        final atual = await isar.vinculos.get(model.id);
+        // Finalizado => somente leitura
+        if (atual != null && atual.fim != null) return atual.id;
+        model.updatedAt = now;
         return isar.vinculos.put(model);
       }
     });

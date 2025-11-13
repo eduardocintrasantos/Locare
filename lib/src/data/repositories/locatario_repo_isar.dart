@@ -26,7 +26,11 @@ class LocatarioRepoIsar implements LocatarioRepo {
   Future<int> upsert(Locatario model) async {
     final isar = await source.db;
     final now = DateTime.now();
-    model.id == 0 ? model.createdAt = now : model.updatedAt = now;
+    if (model.id == 0 || model.id == Isar.autoIncrement) {
+      model.createdAt = now;
+    } else {
+      model.updatedAt = now;
+    }
     return isar.writeTxn(() => isar.locatarios.put(model));
   }
 
