@@ -17,22 +17,23 @@ class VinculoRepoIsar implements VinculoRepo {
     bool? apenasAtivos,
   }) async {
     final isar = await source.db;
+    // Simples: buscar todos ordenados e aplicar filtros em memória.
+    // Isso evita problemas com diferentes estados do QueryBuilder/extension
+    // e é aceitável para bases pequenas/medianas.
+    final all = await isar.vinculos.where().sortByInicioDesc().findAll();
 
-    // Se houver filtros, comece com `filter()` (permite encadear os filtros
-    // e depois chamar `sortByInicioDesc()`); caso contrário use `where()`.
-    if (casaId != null || imobiliariaId != null || locatarioId != null || apenasAtivos == true) {
-      final q0 = isar.vinculos.filter();
-      final q1 = (casaId != null) ? q0.casaIdEqualTo(casaId) : q0;
-      final q2 = (imobiliariaId != null) ? q1.imobiliariaIdEqualTo(imobiliariaId) : q1;
-      final q3 = (locatarioId != null) ? q2.locatarioIdEqualTo(locatarioId) : q2;
-      final q4 = (apenasAtivos == true) ? q3.fimIsNull() : q3;
+    var filtered = all;
+    if (casaId != null)
+      filtered = filtered.where((v) => v.casaId == casaId).toList();
+    if (imobiliariaId != null)
+      filtered =
+          filtered.where((v) => v.imobiliariaId == imobiliariaId).toList();
+    if (locatarioId != null)
+      filtered = filtered.where((v) => v.locatarioId == locatarioId).toList();
+    if (apenasAtivos == true)
+      filtered = filtered.where((v) => v.fim == null).toList();
 
-      final result = await (q4 as dynamic).findAll();
-      result.sort((a, b) => b.inicio.compareTo(a.inicio));
-      return result;
-    }
-
-    return isar.vinculos.where().sortByInicioDesc().findAll();
+    return filtered;
   }
 
   @override

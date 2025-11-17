@@ -35,11 +35,18 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
   int? locatarioId;
 
   var valorAluguel = const MoneyInput.pure();
-  var taxaPercent  = const PercentInput.pure();
-  var taxaValor    = const MoneyInput.pure();
+  var taxaPercent = const PercentInput.pure();
+  var taxaValor = const MoneyInput.pure();
 
   var inicio = const DateInput.pure();
-  var fim    = const DateInput.pure();
+  var fim = const DateInput.pure();
+
+  // Controllers para os campos de texto
+  final valorAluguelCtrl = TextEditingController();
+  final taxaPercentCtrl = TextEditingController();
+  final taxaValorCtrl = TextEditingController();
+  final inicioCtrl = TextEditingController();
+  final fimCtrl = TextEditingController();
 
   Vinculo? _loaded;
 
@@ -49,23 +56,48 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
     _loadIfNeeded();
   }
 
+  @override
+  void dispose() {
+    valorAluguelCtrl.dispose();
+    taxaPercentCtrl.dispose();
+    taxaValorCtrl.dispose();
+    inicioCtrl.dispose();
+    fimCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadIfNeeded() async {
     if (widget.id == null) return;
     final repo = ref.read(vinculoRepoProvider);
     final v = await repo.getById(widget.id!);
     if (!mounted) return;
+
+    if (v != null) {
+      // Preencher controllers ANTES do setState
+      valorAluguelCtrl.text =
+          (v.valorAluguel ?? 0).toStringAsFixed(2).replaceAll('.', ',');
+      taxaPercentCtrl.text = (v.taxaPercent ?? 0).toStringAsFixed(2);
+      taxaValorCtrl.text =
+          (v.taxaValor ?? 0).toStringAsFixed(2).replaceAll('.', ',');
+      inicioCtrl.text = DateFormat('dd/MM/yyyy').format(v.inicio);
+      fimCtrl.text =
+          v.fim == null ? '' : DateFormat('dd/MM/yyyy').format(v.fim!);
+
+      // Atualizar states do Formz
+      valorAluguel = MoneyInput.dirty(valorAluguelCtrl.text);
+      taxaPercent = PercentInput.dirty(taxaPercentCtrl.text);
+      taxaValor = MoneyInput.dirty(taxaValorCtrl.text);
+      inicio = DateInput.dirty(inicioCtrl.text);
+      fim = DateInput.dirty(fimCtrl.text);
+    }
+
     setState(() {
       _loaded = v;
       if (v != null) {
         casaId = v.casaId;
         imobiliariaId = v.imobiliariaId;
-        locatarioId = v.locatarioId;
-        // Formata valores monetários sem símbolos (apenas número com vírgula/ponto)
-        valorAluguel = MoneyInput.dirty((v.valorAluguel ?? 0).toStringAsFixed(2).replaceAll('.', ','));
-        taxaPercent  = PercentInput.dirty((v.taxaPercent ?? 0).toStringAsFixed(2));
-        taxaValor    = MoneyInput.dirty((v.taxaValor ?? 0).toStringAsFixed(2).replaceAll('.', ','));
-        inicio = DateInput.dirty(DateFormat('dd/MM/yyyy').format(v.inicio));
-        fim    = DateInput.dirty(v.fim == null ? '' : DateFormat('dd/MM/yyyy').format(v.fim!));
+        // O banco armazena 0 quando não há locatário; usar null no formulário
+        locatarioId = (v.locatarioId == 0) ? null : v.locatarioId;
       }
     });
   }
@@ -74,15 +106,16 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
 
   /// Formata automaticamente data: "01012025" vira "01/01/2025"
   String _formatDate(String input) {
-    input = input.replaceAll(RegExp(r'[^0-9]'), ''); // remove tudo que não é número
+    input =
+        input.replaceAll(RegExp(r'[^0-9]'), ''); // remove tudo que não é número
     if (input.length > 8) input = input.substring(0, 8); // máximo 8 dígitos
-    if (input.length >= 2) {
-      input = input.replaceRange(2, 2, '/');
+
+    String formatted = '';
+    for (int i = 0; i < input.length; i++) {
+      if (i == 2 || i == 4) formatted += '/';
+      formatted += input[i];
     }
-    if (input.length >= 5) {
-      input = input.replaceRange(5, 5, '/');
-    }
-    return input;
+    return formatted;
   }
 
   void _recalcularTaxas({bool preferValor = false}) {
@@ -95,7 +128,8 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
     } else {
       final tp = taxaPercent.asNum.toDouble();
       final tv = alug * (tp / 100);
-      setState(() => taxaValor = MoneyInput.dirty(NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(tv)));
+      setState(() => taxaValor = MoneyInput.dirty(
+          NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$').format(tv)));
     }
   }
 
@@ -103,47 +137,59 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
   Widget build(BuildContext context) {
     final casas = ref.watch(casasListProvider).value ?? [];
     final imobs = ref.watch(imobiliariasListProvider).value ?? [];
-    final locs  = ref.watch(locatariosListProvider).value ?? [];
+    final locs = ref.watch(locatariosListProvider).value ?? [];
     final vinculos = ref.watch(vinculosListProvider).value ?? [];
     final saving = ref.watch(vinculoActionsProvider).isLoading;
 
     // IDs de casas e locatários com vínculos ATIVOS (fim = null)
     final casasComVinculoAtivo = <int>{};
     final locatariosComVinculoAtivo = <int>{};
-    
+
     for (final v in vinculos) {
-      if (v.fim == null) { // vínculo ativo
+      if (v.fim == null) {
+        // vínculo ativo
         casasComVinculoAtivo.add(v.casaId);
-        locatariosComVinculoAtivo.add(v.locatarioId);
+        // ignora locatário placeholder (0)
+        if (v.locatarioId != 0) locatariosComVinculoAtivo.add(v.locatarioId);
       }
     }
 
     // Filtra casas e locatários disponíveis (sem vínculo ativo)
-    final casasDisponivel = casas.where((c) => !casasComVinculoAtivo.contains(c.id)).toList();
-    final locsDisponivel = locs.where((l) => !locatariosComVinculoAtivo.contains(l.id)).toList();
-    
+    final casasDisponivel =
+        casas.where((c) => !casasComVinculoAtivo.contains(c.id)).toList();
+    final locsDisponivel =
+        locs.where((l) => !locatariosComVinculoAtivo.contains(l.id)).toList();
+
     // Se estiver editando, sempre permite a casa e locatário atuais
     if (_loaded != null) {
       if (!casasDisponivel.any((c) => c.id == casaId)) {
-        final casa = casas.firstWhere((c) => c.id == casaId, orElse: () => Casa()..id=0);
+        final casa = casas.firstWhere((c) => c.id == casaId,
+            orElse: () => Casa()..id = 0);
         if (casa.id != 0) casasDisponivel.add(casa);
       }
-      if (!locsDisponivel.any((l) => l.id == locatarioId)) {
-        final loc = locs.firstWhere((l) => l.id == locatarioId, orElse: () => Locatario()..id=0);
+      // Só adiciona o locatário atual se houver um selecionado
+      if (locatarioId != null &&
+          !locsDisponivel.any((l) => l.id == locatarioId)) {
+        final loc = locs.firstWhere((l) => l.id == locatarioId,
+            orElse: () => Locatario()..id = 0);
         if (loc.id != 0) locsDisponivel.add(loc);
       }
     }
 
     Widget _infoCasa() {
-      final c = casas.firstWhere((e) => e.id == casaId, orElse: () => Casa()..descricao='-');
+      final c = casas.firstWhere((e) => e.id == casaId,
+          orElse: () => Casa()..descricao = '-');
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(c.descricao, style: const TextStyle(fontWeight: FontWeight.bold)),
-        Text([c.rua, c.numero, c.bairro].where((e) => (e ?? '').isNotEmpty).join(', ')),
+        Text([c.rua, c.numero, c.bairro]
+            .where((e) => (e ?? '').isNotEmpty)
+            .join(', ')),
       ]);
     }
 
     Widget _infoImob() {
-      final i = imobs.firstWhere((e) => e.id == imobiliariaId, orElse: () => Imobiliaria()..nome='-');
+      final i = imobs.firstWhere((e) => e.id == imobiliariaId,
+          orElse: () => Imobiliaria()..nome = '-');
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(i.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
         Text(i.cnpj ?? '-'),
@@ -151,7 +197,8 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
     }
 
     Widget _infoLoc() {
-      final l = locs.firstWhere((e) => e.id == locatarioId, orElse: () => Locatario()..nome='-');
+      final l = locs.firstWhere((e) => e.id == locatarioId,
+          orElse: () => Locatario()..nome = '-');
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(l.nome, style: const TextStyle(fontWeight: FontWeight.bold)),
         Text(l.telefone ?? '-'),
@@ -160,16 +207,26 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.id == null ? 'Novo Vínculo' : _readOnly ? 'Vínculo (somente leitura)' : 'Editar Vínculo'),
+        title: Text(widget.id == null
+            ? 'Novo Vínculo'
+            : _readOnly
+                ? 'Vínculo (somente leitura)'
+                : 'Editar Vínculo'),
         actions: [
           if (_loaded != null && !_readOnly)
             TextButton.icon(
-              onPressed: saving ? null : () async {
-                final ok = await confirmDialog(context, title: 'Finalizar vínculo', message: 'Finalizar hoje?');
-                if (!ok) return;
-                await ref.read(vinculoActionsProvider.notifier).finalizar(_loaded!.id);
-                if (mounted) Navigator.pop(context);
-              },
+              onPressed: saving
+                  ? null
+                  : () async {
+                      final ok = await confirmDialog(context,
+                          title: 'Finalizar vínculo',
+                          message: 'Finalizar hoje?');
+                      if (!ok) return;
+                      await ref
+                          .read(vinculoActionsProvider.notifier)
+                          .finalizar(_loaded!.id);
+                      if (mounted) Navigator.pop(context);
+                    },
               icon: const Icon(Icons.flag_outlined),
               label: const Text('Finalizar'),
             ),
@@ -185,14 +242,18 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
               padding: const EdgeInsets.all(16),
               children: [
                 if (_loaded?.updatedAt != null)
-                  Text('Alterado em ${formatDateTime(_loaded!.updatedAt!)}', style: const TextStyle(color: Colors.red)),
+                  Text('Alterado em ${formatDateTime(_loaded!.updatedAt!)}',
+                      style: const TextStyle(color: Colors.red)),
                 Row(
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<int>(
                         decoration: const InputDecoration(labelText: 'Casa *'),
                         value: casaId,
-                        items: casasDisponivel.map((c) => DropdownMenuItem(value: c.id, child: Text(c.descricao))).toList(),
+                        items: casasDisponivel
+                            .map((c) => DropdownMenuItem(
+                                value: c.id, child: Text(c.descricao)))
+                            .toList(),
                         onChanged: (v) => setState(() => casaId = v),
                         validator: (v) => v == null ? 'Obrigatório' : null,
                       ),
@@ -204,34 +265,50 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<int>(
-                        decoration: const InputDecoration(labelText: 'Imobiliária *'),
+                        decoration:
+                            const InputDecoration(labelText: 'Imobiliária *'),
                         value: imobiliariaId,
-                        items: imobs.map((i) => DropdownMenuItem(value: i.id, child: Text(i.nome))).toList(),
+                        items: imobs
+                            .map((i) => DropdownMenuItem(
+                                value: i.id, child: Text(i.nome)))
+                            .toList(),
                         onChanged: (v) => setState(() => imobiliariaId = v),
                         validator: (v) => v == null ? 'Obrigatório' : null,
                       ),
                     ),
-                    LookupButton(tooltip: 'Imobiliária', dialogContent: _infoImob()),
+                    LookupButton(
+                        tooltip: 'Imobiliária', dialogContent: _infoImob()),
                   ],
                 ),
                 Row(
                   children: [
                     Expanded(
-                      child: DropdownButtonFormField<int>(
-                        decoration: const InputDecoration(labelText: 'Locatário *'),
+                      child: DropdownButtonFormField<int?>(
+                        decoration:
+                            const InputDecoration(labelText: 'Locatário'),
                         value: locatarioId,
-                        items: locsDisponivel.map((l) => DropdownMenuItem(value: l.id, child: Text(l.nome))).toList(),
+                        // Deduplicar por id e adicionar opção 'Sem locatário'
+                        items: [
+                          const DropdownMenuItem<int?>(
+                              value: null, child: Text('Sem locatário')),
+                          ...{for (var l in locsDisponivel) l.id: l}
+                              .values
+                              .map((l) => DropdownMenuItem<int?>(
+                                  value: l.id, child: Text(l.nome)))
+                              .toList(),
+                        ],
                         onChanged: (v) => setState(() => locatarioId = v),
-                        validator: (v) => v == null ? 'Obrigatório' : null,
                       ),
                     ),
-                    LookupButton(tooltip: 'Locatário', dialogContent: _infoLoc()),
+                    LookupButton(
+                        tooltip: 'Locatário', dialogContent: _infoLoc()),
                   ],
                 ),
                 const Divider(height: 24),
                 TextFormField(
-                  decoration: const InputDecoration(labelText: 'Valor do aluguel (R\$) *'),
-                  initialValue: valorAluguel.value,
+                  decoration: const InputDecoration(
+                      labelText: 'Valor do aluguel (R\$) *'),
+                  controller: valorAluguelCtrl,
                   onChanged: (v) {
                     setState(() => valorAluguel = MoneyInput.dirty(v));
                     _recalcularTaxas(preferValor: false);
@@ -243,8 +320,9 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                   children: [
                     Expanded(
                       child: TextFormField(
-                        decoration: const InputDecoration(labelText: 'Taxa (%)'),
-                        initialValue: taxaPercent.value,
+                        decoration:
+                            const InputDecoration(labelText: 'Taxa (%)'),
+                        controller: taxaPercentCtrl,
                         onChanged: (v) {
                           setState(() => taxaPercent = PercentInput.dirty(v));
                           _recalcularTaxas(preferValor: false);
@@ -255,8 +333,9 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextFormField(
-                        decoration: const InputDecoration(labelText: 'Taxa (R\$)'),
-                        initialValue: taxaValor.value,
+                        decoration:
+                            const InputDecoration(labelText: 'Taxa (R\$)'),
+                        controller: taxaValorCtrl,
                         onChanged: (v) {
                           setState(() => taxaValor = MoneyInput.dirty(v));
                           _recalcularTaxas(preferValor: true);
@@ -271,23 +350,40 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                   children: [
                     Expanded(
                       child: TextFormField(
-                        decoration: const InputDecoration(labelText: 'Início (dd/MM/yyyy) *'),
-                        initialValue: inicio.value,
+                        decoration: const InputDecoration(
+                            labelText: 'Início (dd/MM/yyyy) *'),
+                        controller: inicioCtrl,
                         onChanged: (v) {
                           final formatted = _formatDate(v);
+                          if (formatted != v) {
+                            inicioCtrl.value = inicioCtrl.value.copyWith(
+                              text: formatted,
+                              selection: TextSelection.fromPosition(
+                                  TextPosition(offset: formatted.length)),
+                            );
+                          }
                           setState(() => inicio = DateInput.dirty(formatted));
                         },
-                        validator: (_) => inicio.invalid ? 'Data inválida' : null,
+                        validator: (_) =>
+                            inicio.invalid ? 'Data inválida' : null,
                         keyboardType: TextInputType.datetime,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: TextFormField(
-                        decoration: const InputDecoration(labelText: 'Fim (opcional)'),
-                        initialValue: fim.value,
+                        decoration:
+                            const InputDecoration(labelText: 'Fim (opcional)'),
+                        controller: fimCtrl,
                         onChanged: (v) {
                           final formatted = _formatDate(v);
+                          if (formatted != v) {
+                            fimCtrl.value = fimCtrl.value.copyWith(
+                              text: formatted,
+                              selection: TextSelection.fromPosition(
+                                  TextPosition(offset: formatted.length)),
+                            );
+                          }
                           setState(() => fim = DateInput.dirty(formatted));
                         },
                         keyboardType: TextInputType.datetime,
@@ -297,30 +393,37 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                 ),
                 const SizedBox(height: 16),
                 FilledButton.icon(
-                  onPressed: saving ? null : () async {
-                    if (!_formKey.currentState!.validate()) return;
-                    if (casaId == null || imobiliariaId == null || locatarioId == null) return;
-                    try {
-                      final v = (_loaded ?? Vinculo())
-                        ..casaId = casaId!
-                        ..imobiliariaId = imobiliariaId!
-                        ..locatarioId = locatarioId!
-                        ..valorAluguel = valorAluguel.asNum.toDouble()
-                        ..taxaPercent = taxaPercent.asNum.toDouble()
-                        ..taxaValor = taxaValor.asNum.toDouble()
-                        ..inicio = inicio.asDate!
-                        ..fim = (fim.value.trim().isEmpty) ? null : fim.asDate;
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          if (!_formKey.currentState!.validate()) return;
+                          if (casaId == null || imobiliariaId == null) return;
+                          try {
+                            final v = (_loaded ?? Vinculo())
+                              ..casaId = casaId!
+                              ..imobiliariaId = imobiliariaId!
+                              // locatario é opcional no formulário; salva 0 quando não informado
+                              ..locatarioId = locatarioId ?? 0
+                              ..valorAluguel = valorAluguel.asNum.toDouble()
+                              ..taxaPercent = taxaPercent.asNum.toDouble()
+                              ..taxaValor = taxaValor.asNum.toDouble()
+                              ..inicio = inicio.asDate!
+                              ..fim = (fim.value.trim().isEmpty)
+                                  ? null
+                                  : fim.asDate;
 
-                      await ref.read(vinculoActionsProvider.notifier).save(v);
-                      if (mounted) Navigator.pop(context);
-                    } catch (e) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Erro ao salvar: $e')),
-                        );
-                      }
-                    }
-                  },
+                            await ref
+                                .read(vinculoActionsProvider.notifier)
+                                .save(v);
+                            if (mounted) Navigator.pop(context);
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Erro ao salvar: $e')),
+                              );
+                            }
+                          }
+                        },
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('Salvar'),
                 ),

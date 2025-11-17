@@ -20,11 +20,11 @@ class VinculosListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final casas = ref.watch(casasListProvider).value ?? [];
     final imobs = ref.watch(imobiliariasListProvider).value ?? [];
-    final locs  = ref.watch(locatariosListProvider).value ?? [];
+    final locs = ref.watch(locatariosListProvider).value ?? [];
 
     final fCasa = ref.watch(vinculoFiltroCasaProvider);
     final fImob = ref.watch(vinculoFiltroImobProvider);
-    final fLoc  = ref.watch(vinculoFiltroLocProvider);
+    final fLoc = ref.watch(vinculoFiltroLocProvider);
     final apenasAtivos = ref.watch(vinculoApenasAtivosProvider);
 
     final lista = ref.watch(vinculosListProvider);
@@ -32,47 +32,51 @@ class VinculosListScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Vínculos'),
-        actions: [
-          DropdownButton<int?>(
-            value: fCasa,
-            hint: const Text('Casa'),
-            underline: const SizedBox(),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Todas as casas')),
-              ...casas.map((Casa c) => DropdownMenuItem(value: c.id, child: Text(c.descricao))),
-            ],
-            onChanged: (v) => ref.read(vinculoFiltroCasaProvider.notifier).state = v,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(48),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            child: Row(
+              children: [
+                DropdownButton<int?>(
+                  value: fCasa,
+                  hint: const Text('Casa'),
+                  underline: const SizedBox(),
+                  items: [
+                    const DropdownMenuItem(
+                        value: null, child: Text('Todas as casas')),
+                    ...casas.map((Casa c) =>
+                        DropdownMenuItem(value: c.id, child: Text(c.descricao))),
+                  ],
+                  onChanged: (v) =>
+                      ref.read(vinculoFiltroCasaProvider.notifier).state = v,
+                ),
+                const SizedBox(width: 8),
+                DropdownButton<int?>(
+                  value: fImob,
+                  hint: const Text('Imobiliária'),
+                  underline: const SizedBox(),
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Todas')),
+                    ...imobs.map((Imobiliaria i) =>
+                        DropdownMenuItem(value: i.id, child: Text(i.nome))),
+                  ],
+                  onChanged: (v) =>
+                      ref.read(vinculoFiltroImobProvider.notifier).state = v,
+                ),
+                const SizedBox(width: 8),
+                FilterChip(
+                  label: const Text('Apenas ativos'),
+                  selected: apenasAtivos,
+                  onSelected: (s) =>
+                      ref.read(vinculoApenasAtivosProvider.notifier).state = s,
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
           ),
-          const SizedBox(width: 8),
-          DropdownButton<int?>(
-            value: fImob,
-            hint: const Text('Imobiliária'),
-            underline: const SizedBox(),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Todas')),
-              ...imobs.map((Imobiliaria i) => DropdownMenuItem(value: i.id, child: Text(i.nome))),
-            ],
-            onChanged: (v) => ref.read(vinculoFiltroImobProvider.notifier).state = v,
-          ),
-          const SizedBox(width: 8),
-          DropdownButton<int?>(
-            value: fLoc,
-            hint: const Text('Locatário'),
-            underline: const SizedBox(),
-            items: [
-              const DropdownMenuItem(value: null, child: Text('Todos')),
-              ...locs.map((Locatario l) => DropdownMenuItem(value: l.id, child: Text(l.nome))),
-            ],
-            onChanged: (v) => ref.read(vinculoFiltroLocProvider.notifier).state = v,
-          ),
-          const SizedBox(width: 8),
-          FilterChip(
-            label: const Text('Apenas ativos'),
-            selected: apenasAtivos,
-            onSelected: (s) => ref.read(vinculoApenasAtivosProvider.notifier).state = s,
-          ),
-          const SizedBox(width: 8),
-        ],
+        ),
       ),
       body: lista.when(
         data: (items) {
@@ -83,13 +87,15 @@ class VinculosListScreen extends ConsumerWidget {
             itemBuilder: (_, i) {
               final Vinculo v = items[i];
               return ListTile(
-                title: Text('Casa #${v.casaId} • Imob #${v.imobiliariaId} • Loc #${v.locatarioId}'),
+                title: Text(
+                    'Casa #${v.casaId} • Imob #${v.imobiliariaId} • Loc #${v.locatarioId}'),
                 subtitle: Text('Início: ${v.inicio.toString().split(' ').first}'
                     '${v.fim != null ? '  |  Fim: ${v.fim!.toString().split(' ').first}' : ''}'),
                 onTap: () => context.push('/vinculos/${v.id}'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: () => ref.read(vinculoActionsProvider.notifier).remove(v.id),
+                  onPressed: () =>
+                      ref.read(vinculoActionsProvider.notifier).remove(v.id),
                 ),
               );
             },

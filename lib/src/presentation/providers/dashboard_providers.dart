@@ -14,7 +14,7 @@ class DashboardResumo {
   final double totalPrevisto;
   final double totalRecebido;
   final Map<int, double> inadPorImobiliaria; // imobiliariaId -> valor
-  final Map<int, double> inadPorLocatario;   // locatarioId -> valor
+  final Map<int, double> inadPorLocatario; // locatarioId -> valor
   DashboardResumo({
     required this.totalPrevisto,
     required this.totalRecebido,
@@ -23,11 +23,15 @@ class DashboardResumo {
   });
 }
 
+/// Provider que contém o mês/ano selecionados no dashboard.
+final dashboardSelectedMonthProvider =
+    StateProvider<DateTime>((ref) => DateTime.now());
+
 final dashboardResumoMesProvider = FutureProvider<DashboardResumo>((ref) async {
   await ref.watch(isarProvider.future);
-  final now = DateTime.now();
-  final ano = now.year;
-  final mes = now.month;
+  final sel = ref.watch(dashboardSelectedMonthProvider);
+  final ano = sel.year;
+  final mes = sel.month;
 
   final vincRepo = ref.read(vinculoRepoProvider);
   final pgRepo = ref.read(pagamentoRepoProvider);
@@ -108,9 +112,124 @@ final dashboardUltimos12Provider = FutureProvider<List<TaxaMes>>((ref) async {
       somaTaxaV += taxaV;
     }
 
-    final taxaPercentMedia = (somaAluguel == 0) ? 0 : (somaTaxaV / somaAluguel) * 100;
-    result.add(TaxaMes(dt.year, dt.month, somaTaxaV, taxaPercentMedia.toDouble()));
+    final taxaPercentMedia =
+        (somaAluguel == 0) ? 0 : (somaTaxaV / somaAluguel) * 100;
+    result.add(
+        TaxaMes(dt.year, dt.month, somaTaxaV, taxaPercentMedia.toDouble()));
   }
 
+  return result;
+});
+
+// ----- Novos providers solicitados pelo usuário -----
+
+class ImobiliariaTaxa {
+  final int imobiliariaId;
+  final double somaTaxaValor;
+  ImobiliariaTaxa(this.imobiliariaId, this.somaTaxaValor);
+}
+
+final dashboardTaxaPorImobiliariaProvider =
+    FutureProvider<List<ImobiliariaTaxa>>((ref) async {
+  await ref.watch(isarProvider.future);
+  final sel = ref.watch(dashboardSelectedMonthProvider);
+  final ano = sel.year;
+  final mes = sel.month;
+
+  final vincRepo = ref.read(vinculoRepoProvider);
+
+  final primeiro = DateTime(ano, mes, 1);
+  final ultimo = DateTime(ano, mes + 1, 0);
+
+  final vincs = await vincRepo.list();
+
+  final imobMap = <int, double>{};
+
+  for (final v in vincs) {
+    final iniOk = !v.inicio.isAfter(ultimo);
+    final fimOk = (v.fim == null) || !v.fim!.isBefore(primeiro);
+    if (!iniOk || !fimOk) continue;
+
+    final aluguel = v.valorAluguel ?? 0;
+    final taxaV = v.taxaValor ?? ((aluguel) * ((v.taxaPercent ?? 0) / 100));
+    imobMap[v.imobiliariaId] = (imobMap[v.imobiliariaId] ?? 0) + taxaV;
+  }
+
+  final list =
+      imobMap.entries.map((e) => ImobiliariaTaxa(e.key, e.value)).toList();
+  // sort descending by taxa
+  list.sort((a, b) => b.somaTaxaValor.compareTo(a.somaTaxaValor));
+  return list;
+});
+
+class OpenFinanceItem {
+  final String casaNome;
+  final String imobiliariaNome;
+  final double valor;
+  final int ano;
+  final int mes;
+  OpenFinanceItem(
+      {required this.casaNome,
+      required this.imobiliariaNome,
+      required this.valor,
+      required this.ano,
+      required this.mes});
+}
+
+final dashboardAbertosAnterioresProvider =
+    FutureProvider<List<OpenFinanceItem>>((ref) async {
+  final sel = ref.watch(dashboardSelectedMonthProvider);
+  final anoSel = sel.year;
+  final mesSel = sel.month;
+
+  final vincRepo = ref.read(vinculoRepoProvider);
+  final casaRepo = ref.read(casaRepoProvider);
+  final imobRepo = ref.read(imobiliariaRepoProvider);
+  final pgRepo = ref.read(pagamentoRepoProvider);
+
+  final result = <OpenFinanceItem>[];
+
+  // Itera sobre todos os meses anteriores ao mês selecionado (últimos 5 anos)
+  final startYear = anoSel - 5;
+  for (int y = startYear; y <= anoSel; y++) {
+    for (int m = 1; m <= 12; m++) {
+      // Pula meses iguais ou posteriores ao selecionado
+      if (y == anoSel && m >= mesSel) continue; // use continue, não break!
+      if (y > anoSel) break; // para no ano posterior
+
+      final primeiro = DateTime(y, m, 1);
+      final ultimo = DateTime(y, m + 1, 0);
+
+      // Busca todos os vínculos ativos naquele mês
+      final vincs = await vincRepo.list();
+      for (final v in vincs) {
+        final iniOk = !v.inicio.isAfter(ultimo);
+        final fimOk = (v.fim == null) || !v.fim!.isBefore(primeiro);
+        if (!iniOk || !fimOk) continue; // não estava ativo naquele mês
+
+        // Verifica se há pagamento registrado para este vínculo/ano/mês
+        final pg = await pgRepo.getByVinculoAnoMes(v.id, y, m);
+        final recebido = pg?.recebido ?? false;
+
+        // Se não foi recebido, adiciona à lista de abertos
+        if (!recebido) {
+          final casa = await casaRepo.getById(v.casaId);
+          final imob = await imobRepo.getById(v.imobiliariaId);
+
+          result.add(OpenFinanceItem(
+            casaNome: casa?.descricao ?? 'Casa #${v.casaId}',
+            imobiliariaNome: imob?.nome ?? 'Imob #${v.imobiliariaId}',
+            valor: v.valorAluguel ?? 0,
+            ano: y,
+            mes: m,
+          ));
+        }
+      }
+    }
+  }
+
+  // sort by ano/mes asc (oldest first)
+  result.sort((a, b) =>
+      (a.ano == b.ano) ? a.mes.compareTo(b.mes) : a.ano.compareTo(b.ano));
   return result;
 });
