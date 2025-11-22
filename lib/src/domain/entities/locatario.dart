@@ -24,4 +24,20 @@ class Locatario {
 
   late DateTime createdAt;
   DateTime? updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nome': nome,
+      'cpf': cpf,
+      'rg': rg,
+      'telefone': telefone,
+      'celular': celular,
+      'fiadorNome': fiadorNome,
+      'fiadorCpf': fiadorCpf,
+      'fiadorRg': fiadorRg,
+      'fiadorTelefone': fiadorTelefone,
+      'fiadorCelular': fiadorCelular,
+    };
+  }
 }

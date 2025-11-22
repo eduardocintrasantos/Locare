@@ -19,4 +19,16 @@ class Casa {
 
   late DateTime createdAt;
   DateTime? updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'descricao': descricao,
+      'rua': rua,
+      'numero': numero,
+      'cep': cep,
+      'bairro': bairro,
+      'imobiliariaId': imobiliariaId,
+    };
+  }
 }

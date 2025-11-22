@@ -20,7 +20,8 @@ class ResumoFinanceiroScreen extends ConsumerWidget {
 
     // Gera opções de ano/mês a partir do agora e últimos 24 meses (suficiente no MVP).
     final now = DateTime.now();
-    final meses = List.generate(24, (i) => DateTime(now.year, now.month - i, 1));
+    final meses =
+        List.generate(24, (i) => DateTime(now.year, now.month - i, 1));
     final anos = meses.map((d) => d.year).toSet().toList()..sort();
 
     return Scaffold(
@@ -37,22 +38,33 @@ class ResumoFinanceiroScreen extends ConsumerWidget {
                 DropdownButton<int>(
                   value: filtro.ano,
                   underline: const SizedBox(),
-                  items: anos.map((y) => DropdownMenuItem(value: y, child: Text('$y'))).toList(),
+                  items: anos
+                      .map((y) => DropdownMenuItem(value: y, child: Text('$y')))
+                      .toList(),
                   onChanged: (y) {
                     final m = filtro.mes;
                     ref.read(resumoFiltroProvider.notifier).state =
-                        ResumoFiltro(ano: y!, mes: m, imobiliariaId: filtro.imobiliariaId, apenasRecebidos: filtro.apenasRecebidos);
+                        ResumoFiltro(
+                            ano: y!,
+                            mes: m,
+                            imobiliariaId: filtro.imobiliariaId,
+                            apenasRecebidos: filtro.apenasRecebidos);
                   },
                 ),
                 DropdownButton<int>(
                   value: filtro.mes,
                   underline: const SizedBox(),
                   items: List.generate(12, (i) => i + 1)
-                      .map((m) => DropdownMenuItem(value: m, child: Text(m.toString().padLeft(2, '0'))))
+                      .map((m) => DropdownMenuItem(
+                          value: m, child: Text(m.toString().padLeft(2, '0'))))
                       .toList(),
                   onChanged: (m) {
                     ref.read(resumoFiltroProvider.notifier).state =
-                        ResumoFiltro(ano: filtro.ano, mes: m!, imobiliariaId: filtro.imobiliariaId, apenasRecebidos: filtro.apenasRecebidos);
+                        ResumoFiltro(
+                            ano: filtro.ano,
+                            mes: m!,
+                            imobiliariaId: filtro.imobiliariaId,
+                            apenasRecebidos: filtro.apenasRecebidos);
                   },
                 ),
                 DropdownButton<int?>(
@@ -60,11 +72,16 @@ class ResumoFinanceiroScreen extends ConsumerWidget {
                   underline: const SizedBox(),
                   items: [
                     const DropdownMenuItem(value: null, child: Text('Todas')),
-                    ...imobs.map((Imobiliaria i) => DropdownMenuItem(value: i.id, child: Text(i.nome))),
+                    ...imobs.map((Imobiliaria i) =>
+                        DropdownMenuItem(value: i.id, child: Text(i.nome))),
                   ],
                   onChanged: (v) {
                     ref.read(resumoFiltroProvider.notifier).state =
-                        ResumoFiltro(ano: filtro.ano, mes: filtro.mes, imobiliariaId: v, apenasRecebidos: filtro.apenasRecebidos);
+                        ResumoFiltro(
+                            ano: filtro.ano,
+                            mes: filtro.mes,
+                            imobiliariaId: v,
+                            apenasRecebidos: filtro.apenasRecebidos);
                   },
                 ),
                 FilterChip(
@@ -72,7 +89,11 @@ class ResumoFinanceiroScreen extends ConsumerWidget {
                   selected: filtro.apenasRecebidos,
                   onSelected: (s) {
                     ref.read(resumoFiltroProvider.notifier).state =
-                        ResumoFiltro(ano: filtro.ano, mes: filtro.mes, imobiliariaId: filtro.imobiliariaId, apenasRecebidos: s);
+                        ResumoFiltro(
+                            ano: filtro.ano,
+                            mes: filtro.mes,
+                            imobiliariaId: filtro.imobiliariaId,
+                            apenasRecebidos: s);
                   },
                 ),
               ],
@@ -92,18 +113,24 @@ class ResumoFinanceiroScreen extends ConsumerWidget {
               final it = list[i];
               return ListTile(
                 title: Text(it.casa.descricao),
-                subtitle: Text('${it.imobiliaria.nome} • Aluguel ${formatMoney(it.aluguel)} • Taxa ${formatMoney(it.taxaValor)} (${it.taxaPercent.toStringAsFixed(2)}%)'),
+                subtitle: Text(
+                    '${it.imobiliaria.nome} • Aluguel ${formatMoney(it.aluguel)} • Taxa ${formatMoney(it.taxaValor)} (${it.taxaPercent.toStringAsFixed(2)}%)'),
                 trailing: Switch(
                   value: it.recebido,
                   onChanged: (to) async {
                     final ok = await confirmDialog(
                       context,
-                      title: to ? 'Confirmar recebimento?' : 'Estornar recebimento?',
-                      message: to ? 'Marcar como recebido?' : 'Marcar como não recebido?',
+                      title: to
+                          ? 'Confirmar recebimento?'
+                          : 'Estornar recebimento?',
+                      message: to
+                          ? 'Marcar como recebido?'
+                          : 'Marcar como não recebido?',
                     );
                     if (!ok) return;
                     try {
-                      await ref.read(resumoActionsProvider.notifier)
+                      await ref
+                          .read(resumoActionsProvider.notifier)
                           .toggle(it.vinculo.id, filtro.ano, filtro.mes, to);
                     } catch (e) {
                       if (context.mounted) {

@@ -5,4 +5,5 @@ import 'package:intl/intl.dart';
 
 String formatDateTime(DateTime dt) => DateFormat('dd/MM/yyyy HH:mm').format(dt);
 String formatDate(DateTime dt) => DateFormat('dd/MM/yyyy').format(dt);
-String formatMoney(num v) => NumberFormat.simpleCurrency(locale: 'pt_BR').format(v);
+String formatMoney(num v) =>
+    NumberFormat.simpleCurrency(locale: 'pt_BR').format(v);

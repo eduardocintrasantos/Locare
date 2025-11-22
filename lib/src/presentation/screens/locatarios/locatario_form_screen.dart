@@ -1,57 +1,15 @@
 // Form de Locatário: nome* + dados e fiador. "Alterado em" quando aplicável.
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../../domain/entities/locatario.dart';
 import '../../../core/formz_inputs/non_empty_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/locatario_providers.dart';
 import '../../providers/_repos_provider.dart';
-
-// Funções auxiliares para máscaras
-String _formatCpf(String value) {
-  value = value.replaceAll(RegExp(r'\D'), '');
-  if (value.length > 11) value = value.substring(0, 11);
-  if (value.isEmpty) return '';
-  if (value.length <= 3) return value;
-  if (value.length <= 6)
-    return '${value.substring(0, 3)}.${value.substring(3)}';
-  if (value.length <= 9)
-    return '${value.substring(0, 3)}.${value.substring(3, 6)}.${value.substring(6)}';
-  return '${value.substring(0, 3)}.${value.substring(3, 6)}.${value.substring(6, 9)}-${value.substring(9)}';
-}
-
-String _formatRg(String value) {
-  value = value.replaceAll(RegExp(r'\D'), '');
-  if (value.length > 9) value = value.substring(0, 9);
-  if (value.isEmpty) return '';
-  if (value.length <= 2) return value;
-  if (value.length <= 5)
-    return '${value.substring(0, 2)}.${value.substring(2)}';
-  if (value.length <= 8)
-    return '${value.substring(0, 2)}.${value.substring(2, 5)}.${value.substring(5)}';
-  return '${value.substring(0, 2)}.${value.substring(2, 5)}.${value.substring(5, 8)}-${value.substring(8)}';
-}
-
-String _formatPhone(String value) {
-  value = value.replaceAll(RegExp(r'\D'), '');
-  if (value.length > 10) value = value.substring(0, 10);
-  if (value.isEmpty) return '';
-  if (value.length <= 2) return '($value';
-  if (value.length <= 6)
-    return '(${value.substring(0, 2)}) ${value.substring(2)}';
-  return '(${value.substring(0, 2)}) ${value.substring(2, 6)}-${value.substring(6)}';
-}
-
-String _formatCellPhone(String value) {
-  value = value.replaceAll(RegExp(r'\D'), '');
-  if (value.length > 11) value = value.substring(0, 11);
-  if (value.isEmpty) return '';
-  if (value.length <= 2) return '($value';
-  if (value.length <= 7)
-    return '(${value.substring(0, 2)}) ${value.substring(2)}';
-  return '(${value.substring(0, 2)}) ${value.substring(2, 7)}-${value.substring(7)}';
-}
+import '../../../data/api/post/locatario.dart';
 
 class LocatarioFormScreen extends ConsumerStatefulWidget {
   final int? id;
@@ -76,6 +34,48 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
   final fTelCtrl = TextEditingController();
   final fCelCtrl = TextEditingController();
   Locatario? _loaded;
+
+  // Máscaras
+  final cpfMask = MaskTextInputFormatter(
+    mask: '###.###.###-##',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  final rgMask = MaskTextInputFormatter(
+    mask: '##.###.###-#',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  final telMask = MaskTextInputFormatter(
+    mask: '(16) ####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  final celMask = MaskTextInputFormatter(
+    mask: '(16) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  // Máscaras para fiador
+  final fCpfMask = MaskTextInputFormatter(
+    mask: '###.###.###-##',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  final fRgMask = MaskTextInputFormatter(
+    mask: '##.###.###-#',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  final fTelMask = MaskTextInputFormatter(
+    mask: '(16) ####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  final fCelMask = MaskTextInputFormatter(
+    mask: '(16) #####-####',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
 
   @override
   void initState() {
@@ -107,15 +107,34 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
     if (m != null) {
       nomeCtrl.text = m.nome;
       nome = NonEmptyInput.dirty(m.nome);
-      cpfCtrl.text = _formatCpf(m.cpf ?? '');
-      rgCtrl.text = _formatRg(m.rg ?? '');
-      telCtrl.text = _formatPhone(m.telefone ?? '');
-      celCtrl.text = _formatCellPhone(m.celular ?? '');
+
+      if (m.cpf != null && m.cpf!.isNotEmpty) {
+        cpfCtrl.text = cpfMask.maskText(m.cpf!);
+      }
+      if (m.rg != null && m.rg!.isNotEmpty) {
+        rgCtrl.text = rgMask.maskText(m.rg!);
+      }
+      if (m.telefone != null && m.telefone!.isNotEmpty) {
+        telCtrl.text = telMask.maskText(m.telefone!);
+      }
+      if (m.celular != null && m.celular!.isNotEmpty) {
+        celCtrl.text = celMask.maskText(m.celular!);
+      }
+
       fNomeCtrl.text = m.fiadorNome ?? '';
-      fCpfCtrl.text = _formatCpf(m.fiadorCpf ?? '');
-      fRgCtrl.text = _formatRg(m.fiadorRg ?? '');
-      fTelCtrl.text = _formatPhone(m.fiadorTelefone ?? '');
-      fCelCtrl.text = _formatCellPhone(m.fiadorCelular ?? '');
+
+      if (m.fiadorCpf != null && m.fiadorCpf!.isNotEmpty) {
+        fCpfCtrl.text = fCpfMask.maskText(m.fiadorCpf!);
+      }
+      if (m.fiadorRg != null && m.fiadorRg!.isNotEmpty) {
+        fRgCtrl.text = fRgMask.maskText(m.fiadorRg!);
+      }
+      if (m.fiadorTelefone != null && m.fiadorTelefone!.isNotEmpty) {
+        fTelCtrl.text = fTelMask.maskText(m.fiadorTelefone!);
+      }
+      if (m.fiadorCelular != null && m.fiadorCelular!.isNotEmpty) {
+        fCelCtrl.text = fCelMask.maskText(m.fiadorCelular!);
+      }
     }
 
     setState(() {
@@ -151,35 +170,21 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
               children: [
                 Expanded(
                   child: TextField(
-                    decoration: const InputDecoration(labelText: 'CPF'),
+                    decoration: const InputDecoration(
+                        labelText: 'CPF', hintText: '000.000.000-00'),
                     controller: cpfCtrl,
-                    onChanged: (v) {
-                      final formatted = _formatCpf(v);
-                      if (formatted != v) {
-                        cpfCtrl.value = cpfCtrl.value.copyWith(
-                          text: formatted,
-                          selection: TextSelection.fromPosition(
-                              TextPosition(offset: formatted.length)),
-                        );
-                      }
-                    },
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [cpfMask],
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: TextField(
-                    decoration: const InputDecoration(labelText: 'RG'),
+                    decoration: const InputDecoration(
+                        labelText: 'RG', hintText: '00.000.000-0'),
                     controller: rgCtrl,
-                    onChanged: (v) {
-                      final formatted = _formatRg(v);
-                      if (formatted != v) {
-                        rgCtrl.value = rgCtrl.value.copyWith(
-                          text: formatted,
-                          selection: TextSelection.fromPosition(
-                              TextPosition(offset: formatted.length)),
-                        );
-                      }
-                    },
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [rgMask],
                   ),
                 ),
               ],
@@ -188,34 +193,19 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
               children: [
                 Expanded(
                     child: TextField(
-                        decoration:
-                            const InputDecoration(labelText: 'Telefone'),
+                        decoration: const InputDecoration(
+                            labelText: 'Telefone', hintText: '(16) 0000-0000'),
                         controller: telCtrl,
-                        onChanged: (v) {
-                          final formatted = _formatPhone(v);
-                          if (formatted != v) {
-                            telCtrl.value = telCtrl.value.copyWith(
-                              text: formatted,
-                              selection: TextSelection.fromPosition(
-                                  TextPosition(offset: formatted.length)),
-                            );
-                          }
-                        })),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [telMask])),
                 const SizedBox(width: 8),
                 Expanded(
                     child: TextField(
-                        decoration: const InputDecoration(labelText: 'Celular'),
+                        decoration: const InputDecoration(
+                            labelText: 'Celular', hintText: '(16) 00000-0000'),
                         controller: celCtrl,
-                        onChanged: (v) {
-                          final formatted = _formatCellPhone(v);
-                          if (formatted != v) {
-                            celCtrl.value = celCtrl.value.copyWith(
-                              text: formatted,
-                              selection: TextSelection.fromPosition(
-                                  TextPosition(offset: formatted.length)),
-                            );
-                          }
-                        })),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [celMask])),
               ],
             ),
             const Divider(height: 24),
@@ -227,67 +217,38 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
               children: [
                 Expanded(
                     child: TextField(
-                        decoration: const InputDecoration(labelText: 'CPF'),
+                        decoration: const InputDecoration(
+                            labelText: 'CPF', hintText: '000.000.000-00'),
                         controller: fCpfCtrl,
-                        onChanged: (v) {
-                          final formatted = _formatCpf(v);
-                          if (formatted != v) {
-                            fCpfCtrl.value = fCpfCtrl.value.copyWith(
-                              text: formatted,
-                              selection: TextSelection.fromPosition(
-                                  TextPosition(offset: formatted.length)),
-                            );
-                          }
-                        })),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [fCpfMask])),
                 const SizedBox(width: 8),
                 Expanded(
                     child: TextField(
-                        decoration: const InputDecoration(labelText: 'RG'),
+                        decoration: const InputDecoration(
+                            labelText: 'RG', hintText: '00.000.000-0'),
                         controller: fRgCtrl,
-                        onChanged: (v) {
-                          final formatted = _formatRg(v);
-                          if (formatted != v) {
-                            fRgCtrl.value = fRgCtrl.value.copyWith(
-                              text: formatted,
-                              selection: TextSelection.fromPosition(
-                                  TextPosition(offset: formatted.length)),
-                            );
-                          }
-                        })),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [fRgMask])),
               ],
             ),
             Row(
               children: [
                 Expanded(
                     child: TextField(
-                        decoration:
-                            const InputDecoration(labelText: 'Telefone'),
+                        decoration: const InputDecoration(
+                            labelText: 'Telefone', hintText: '(16) 0000-0000'),
                         controller: fTelCtrl,
-                        onChanged: (v) {
-                          final formatted = _formatPhone(v);
-                          if (formatted != v) {
-                            fTelCtrl.value = fTelCtrl.value.copyWith(
-                              text: formatted,
-                              selection: TextSelection.fromPosition(
-                                  TextPosition(offset: formatted.length)),
-                            );
-                          }
-                        })),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [fTelMask])),
                 const SizedBox(width: 8),
                 Expanded(
                     child: TextField(
-                        decoration: const InputDecoration(labelText: 'Celular'),
+                        decoration: const InputDecoration(
+                            labelText: 'Celular', hintText: '(16) 00000-0000'),
                         controller: fCelCtrl,
-                        onChanged: (v) {
-                          final formatted = _formatCellPhone(v);
-                          if (formatted != v) {
-                            fCelCtrl.value = fCelCtrl.value.copyWith(
-                              text: formatted,
-                              selection: TextSelection.fromPosition(
-                                  TextPosition(offset: formatted.length)),
-                            );
-                          }
-                        })),
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [fCelMask])),
               ],
             ),
             const SizedBox(height: 16),
@@ -296,38 +257,72 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
                   ? null
                   : () async {
                       if (!_formKey.currentState!.validate()) return;
+
                       final m = (_loaded ?? Locatario())
                         ..nome = nomeCtrl.text.trim()
                         ..cpf = cpfCtrl.text.trim().isEmpty
                             ? null
-                            : cpfCtrl.text.replaceAll(RegExp(r'\D'), '').trim()
+                            : cpfMask.getUnmaskedText()
                         ..rg = rgCtrl.text.trim().isEmpty
                             ? null
-                            : rgCtrl.text.replaceAll(RegExp(r'\D'), '').trim()
+                            : rgMask.getUnmaskedText()
                         ..telefone = telCtrl.text.trim().isEmpty
                             ? null
-                            : telCtrl.text.replaceAll(RegExp(r'\D'), '').trim()
+                            : telMask.getUnmaskedText()
                         ..celular = celCtrl.text.trim().isEmpty
                             ? null
-                            : celCtrl.text.replaceAll(RegExp(r'\D'), '').trim()
+                            : celMask.getUnmaskedText()
                         ..fiadorNome = fNomeCtrl.text.trim().isEmpty
                             ? null
                             : fNomeCtrl.text.trim()
                         ..fiadorCpf = fCpfCtrl.text.trim().isEmpty
                             ? null
-                            : fCpfCtrl.text.replaceAll(RegExp(r'\D'), '').trim()
+                            : fCpfMask.getUnmaskedText()
                         ..fiadorRg = fRgCtrl.text.trim().isEmpty
                             ? null
-                            : fRgCtrl.text.replaceAll(RegExp(r'\D'), '').trim()
+                            : fRgMask.getUnmaskedText()
                         ..fiadorTelefone = fTelCtrl.text.trim().isEmpty
                             ? null
-                            : fTelCtrl.text.replaceAll(RegExp(r'\D'), '').trim()
+                            : fTelMask.getUnmaskedText()
                         ..fiadorCelular = fCelCtrl.text.trim().isEmpty
                             ? null
-                            : fCelCtrl.text
-                                .replaceAll(RegExp(r'\D'), '')
-                                .trim();
-                      await ref.read(locatarioActionsProvider.notifier).save(m);
+                            : fCelMask.getUnmaskedText();
+
+                      // Salva localmente primeiro
+                      try {
+                        await ref
+                            .read(locatarioActionsProvider.notifier)
+                            .save(m);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Erro ao salvar localmente: $e')),
+                          );
+                        }
+                        return;
+                      }
+
+                      // Depois tenta salvar na API (se falhar, não tem problema)
+                      try {
+                        final locatarioMap = {
+                          'id': m.id,
+                          'nome': m.nome,
+                          'cpf': m.cpf,
+                          'rg': m.rg,
+                          'telefone': m.telefone,
+                          'celular': m.celular,
+                          'fiadorNome': m.fiadorNome,
+                          'fiadorCpf': m.fiadorCpf,
+                          'fiadorRg': m.fiadorRg,
+                          'fiadorTelefone': m.fiadorTelefone,
+                          'fiadorCelular': m.fiadorCelular,
+                        };
+                        await salvarLocatario(locatarioMap);
+                      } catch (e) {
+                        print('Falha ao salvar na API: $e');
+                      }
+
                       if (mounted) Navigator.pop(context);
                     },
               icon: const Icon(Icons.save_outlined),

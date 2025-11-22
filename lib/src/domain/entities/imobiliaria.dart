@@ -20,4 +20,18 @@ class Imobiliaria {
 
   late DateTime createdAt;
   DateTime? updatedAt;
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'nome': nome,
+      'cnpj': cnpj,
+      'rua': rua,
+      'cep': cep,
+      'bairro': bairro,
+      'numero': numero,
+      'telefone': telefone,
+      'nomeContato': nomeContato,
+    };
+  }
 }

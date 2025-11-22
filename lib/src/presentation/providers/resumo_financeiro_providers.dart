@@ -3,7 +3,6 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/vinculo.dart';
-import '../../domain/entities/pagamento.dart';
 import '../../domain/entities/casa.dart';
 import '../../domain/entities/imobiliaria.dart';
 import '../../domain/repositories/vinculo_repo.dart';
@@ -12,6 +11,7 @@ import '../../domain/repositories/casa_repo.dart';
 import '../../domain/repositories/imobiliaria_repo.dart';
 import '_repos_provider.dart';
 import 'db_provider.dart';
+import '../../data/api/post/pagamento.dart';
 
 class ResumoFiltro {
   final int ano;
@@ -67,7 +67,10 @@ final resumoItensProvider = FutureProvider<List<ResumoItem>>((ref) async {
   final ativosNoPeriodo = todos.where((v) {
     final iniOk = !v.inicio.isAfter(ultimo);
     final fimOk = (v.fim == null) || !v.fim!.isBefore(primeiro);
-    return iniOk && fimOk && (filtro.imobiliariaId == null || v.imobiliariaId == filtro.imobiliariaId);
+    return iniOk &&
+        fimOk &&
+        (filtro.imobiliariaId == null ||
+            v.imobiliariaId == filtro.imobiliariaId);
   }).toList();
 
   final casas = {for (final c in await casaRepo.list()) c.id: c};
@@ -108,16 +111,50 @@ class ResumoActions extends StateNotifier<AsyncValue<void>> {
   ResumoActions(this.pgRepo, this.ref) : super(const AsyncData(null));
 
   Future<void> toggle(int vinculoId, int ano, int mes, bool to) async {
+    print(
+        '🔄 Toggle iniciado: vinculoId=$vinculoId, ano=$ano, mes=$mes, to=$to');
     state = const AsyncLoading();
+
     try {
-      if (to) {
-        await pgRepo.marcarRecebido(vinculoId, ano, mes);
-      } else {
-        await pgRepo.estornar(vinculoId, ano, mes);
-      }
+      final pagamento = to
+          ? await pgRepo.marcarRecebido(vinculoId, ano, mes)
+          : await pgRepo.estornar(vinculoId, ano, mes);
+
+      print(
+          '📄 Pagamento ${to ? "marcado" : "estornado"}: recebido=${pagamento.recebido}');
+
+      // Atualiza UI ANTES de tentar API
       state = const AsyncData(null);
       ref.invalidate(resumoItensProvider);
+      print('✅ UI atualizada!');
+
+      // Tenta salvar na API em segundo plano (se falhar, não tem problema)
+      final pagamentoMap = {
+        'id': pagamento.id,
+        'vinculoId': pagamento.vinculoId,
+        'ano': pagamento.ano,
+        'mes': pagamento.mes,
+        'recebido': pagamento.recebido,
+        'recebidoEm': pagamento.recebidoEm?.toIso8601String(),
+      };
+      print('📦 Dados para API: $pagamentoMap');
+      print('🚀 Iniciando chamada da API em background...');
+
+      salvarPagamento(pagamentoMap).timeout(
+        const Duration(seconds: 5),
+        onTimeout: () {
+          print('⏱️ Timeout ao salvar na API');
+        },
+      ).then((_) {
+        print('🌐 API chamada com sucesso!');
+      }).catchError((e) {
+        print('❌ Falha ao salvar pagamento na API: $e');
+      });
+
+      print('✅ Toggle finalizado!');
     } catch (e, st) {
+      print('❌ ERRO no toggle: $e');
+      print('Stack trace: $st');
       state = AsyncError(e, st);
       rethrow;
     }

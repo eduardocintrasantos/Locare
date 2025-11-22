@@ -46,8 +46,8 @@ class VinculosListScreen extends ConsumerWidget {
                   items: [
                     const DropdownMenuItem(
                         value: null, child: Text('Todas as casas')),
-                    ...casas.map((Casa c) =>
-                        DropdownMenuItem(value: c.id, child: Text(c.descricao))),
+                    ...casas.map((Casa c) => DropdownMenuItem(
+                        value: c.id, child: Text(c.descricao))),
                   ],
                   onChanged: (v) =>
                       ref.read(vinculoFiltroCasaProvider.notifier).state = v,
@@ -92,11 +92,11 @@ class VinculosListScreen extends ConsumerWidget {
                 subtitle: Text('Início: ${v.inicio.toString().split(' ').first}'
                     '${v.fim != null ? '  |  Fim: ${v.fim!.toString().split(' ').first}' : ''}'),
                 onTap: () => context.push('/vinculos/${v.id}'),
-                trailing: IconButton(
+                /*trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
                   onPressed: () =>
                       ref.read(vinculoActionsProvider.notifier).remove(v.id),
-                ),
+                ),*/
               );
             },
           );

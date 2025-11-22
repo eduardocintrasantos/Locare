@@ -18,6 +18,7 @@ import '../../../core/formz_inputs/money_input.dart';
 import '../../../core/formz_inputs/percent_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/_repos_provider.dart';
+import '../../../data/api/post/vinculo.dart';
 
 class VinculoFormScreen extends ConsumerStatefulWidget {
   final int? id;
@@ -162,12 +163,13 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
 
     // Se estiver editando, sempre permite a casa e locatário atuais
     if (_loaded != null) {
-      if (!casasDisponivel.any((c) => c.id == casaId)) {
+      // Adiciona a casa atual se não estiver na lista
+      if (casaId != null && !casasDisponivel.any((c) => c.id == casaId)) {
         final casa = casas.firstWhere((c) => c.id == casaId,
             orElse: () => Casa()..id = 0);
         if (casa.id != 0) casasDisponivel.add(casa);
       }
-      // Só adiciona o locatário atual se houver um selecionado
+      // Adiciona o locatário atual se houver um e não estiver na lista
       if (locatarioId != null &&
           !locsDisponivel.any((l) => l.id == locatarioId)) {
         final loc = locs.firstWhere((l) => l.id == locatarioId,
@@ -287,12 +289,10 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                         decoration:
                             const InputDecoration(labelText: 'Locatário'),
                         value: locatarioId,
-                        // Deduplicar por id e adicionar opção 'Sem locatário'
                         items: [
                           const DropdownMenuItem<int?>(
                               value: null, child: Text('Sem locatário')),
-                          ...{for (var l in locsDisponivel) l.id: l}
-                              .values
+                          ...locsDisponivel
                               .map((l) => DropdownMenuItem<int?>(
                                   value: l.id, child: Text(l.nome)))
                               .toList(),
@@ -398,31 +398,53 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                       : () async {
                           if (!_formKey.currentState!.validate()) return;
                           if (casaId == null || imobiliariaId == null) return;
-                          try {
-                            final v = (_loaded ?? Vinculo())
-                              ..casaId = casaId!
-                              ..imobiliariaId = imobiliariaId!
-                              // locatario é opcional no formulário; salva 0 quando não informado
-                              ..locatarioId = locatarioId ?? 0
-                              ..valorAluguel = valorAluguel.asNum.toDouble()
-                              ..taxaPercent = taxaPercent.asNum.toDouble()
-                              ..taxaValor = taxaValor.asNum.toDouble()
-                              ..inicio = inicio.asDate!
-                              ..fim = (fim.value.trim().isEmpty)
-                                  ? null
-                                  : fim.asDate;
 
+                          final v = (_loaded ?? Vinculo())
+                            ..casaId = casaId!
+                            ..imobiliariaId = imobiliariaId!
+                            ..locatarioId = locatarioId ?? 0
+                            ..valorAluguel = valorAluguel.asNum.toDouble()
+                            ..taxaPercent = taxaPercent.asNum.toDouble()
+                            ..taxaValor = taxaValor.asNum.toDouble()
+                            ..inicio = inicio.asDate!
+                            ..fim =
+                                (fim.value.trim().isEmpty) ? null : fim.asDate;
+
+                          // Salva localmente primeiro
+                          try {
                             await ref
                                 .read(vinculoActionsProvider.notifier)
                                 .save(v);
-                            if (mounted) Navigator.pop(context);
                           } catch (e) {
                             if (mounted) {
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Erro ao salvar: $e')),
+                                SnackBar(
+                                    content:
+                                        Text('Erro ao salvar localmente: $e')),
                               );
                             }
+                            return;
                           }
+
+                          // Depois tenta salvar na API (se falhar, não tem problema)
+                          try {
+                            final vinculoMap = {
+                              'id': v.id,
+                              'casaId': v.casaId,
+                              'imobiliariaId': v.imobiliariaId,
+                              'locatarioId': v.locatarioId,
+                              'valorAluguel': v.valorAluguel,
+                              'taxaPercent': v.taxaPercent,
+                              'taxaValor': v.taxaValor,
+                              'inicio': v.inicio.toIso8601String(),
+                              'fim': v.fim?.toIso8601String(),
+                            };
+                            await salvarVinculo(vinculoMap);
+                          } catch (e) {
+                            print('Falha ao salvar na API: $e');
+                          }
+
+                          if (mounted) Navigator.pop(context);
                         },
                   icon: const Icon(Icons.save_outlined),
                   label: const Text('Salvar'),

@@ -1,7 +1,10 @@
 // Form de Casa: descrição* + endereço + dropdown de Imobiliária + "Alterado em".
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:locare/src/data/api/post/casa.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../../domain/entities/casa.dart';
 import '../../../domain/entities/imobiliaria.dart';
 import '../../../core/formz_inputs/non_empty_input.dart';
@@ -28,6 +31,12 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
   final bairroCtrl = TextEditingController();
   int? imobiliariaId;
   Casa? _loaded;
+
+  // Máscara para CEP
+  final cepMask = MaskTextInputFormatter(
+    mask: '#####-###',
+    filter: {"#": RegExp(r'[0-9]')},
+  );
 
   @override
   void initState() {
@@ -56,7 +65,12 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
       descricao = NonEmptyInput.dirty(m.descricao);
       ruaCtrl.text = m.rua ?? '';
       numeroCtrl.text = m.numero ?? '';
-      cepCtrl.text = m.cep ?? '';
+
+      if (m.cep != null && m.cep!.isNotEmpty) {
+        cepMask.updateMask(mask: '#####-###', filter: {"#": RegExp(r'[0-9]')});
+        cepCtrl.text = cepMask.maskText(m.cep!);
+      }
+
       bairroCtrl.text = m.bairro ?? '';
       imobiliariaId = m.imobiliariaId;
     }
@@ -99,12 +113,18 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
                 Expanded(
                     child: TextField(
                         decoration: const InputDecoration(labelText: 'Número'),
-                        controller: numeroCtrl)),
+                        controller: numeroCtrl,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ])),
                 const SizedBox(width: 8),
                 Expanded(
                     child: TextField(
                         decoration: const InputDecoration(labelText: 'CEP'),
-                        controller: cepCtrl)),
+                        controller: cepCtrl,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [cepMask])),
               ],
             ),
             TextField(
@@ -128,6 +148,7 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
                   ? null
                   : () async {
                       if (!_formKey.currentState!.validate()) return;
+
                       final m = (_loaded ?? Casa())
                         ..descricao = descricaoCtrl.text.trim()
                         ..rua = ruaCtrl.text.trim().isEmpty
@@ -138,12 +159,40 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
                             : numeroCtrl.text.trim()
                         ..cep = cepCtrl.text.trim().isEmpty
                             ? null
-                            : cepCtrl.text.trim()
+                            : cepMask.getUnmaskedText()
                         ..bairro = bairroCtrl.text.trim().isEmpty
                             ? null
                             : bairroCtrl.text.trim()
                         ..imobiliariaId = imobiliariaId;
-                      await ref.read(casaActionsProvider.notifier).save(m);
+
+                      // Salva localmente primeiro
+                      try {
+                        await ref.read(casaActionsProvider.notifier).save(m);
+                      } catch (e) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                                content: Text('Erro ao salvar localmente: $e')),
+                          );
+                        }
+                        return;
+                      }
+
+                      // Depois tenta salvar na API (se falhar, não tem problema)
+                      try {
+                        final casaMap = {
+                          'descricao': m.descricao,
+                          'rua': m.rua,
+                          'numero': m.numero,
+                          'cep': m.cep,
+                          'bairro': m.bairro,
+                          'imobiliariaId': m.imobiliariaId,
+                        };
+                        await salvarCasa(casaMap);
+                      } catch (e) {
+                        print('Falha ao salvar na API: $e');
+                      }
+
                       if (mounted) Navigator.pop(context);
                     },
               icon: const Icon(Icons.save_outlined),
