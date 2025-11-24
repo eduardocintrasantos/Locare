@@ -4,17 +4,17 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../../presentation/widgets/app_scaffold.dart';
-import '../../presentation/screens/dashboard/dashboard_screen.dart';
-import '../../presentation/screens/imobiliarias/imobiliarias_list_screen.dart';
-import '../../presentation/screens/imobiliarias/imobiliaria_form_screen.dart';
-import '../../presentation/screens/casas/casas_list_screen.dart';
-import '../../presentation/screens/casas/casa_form_screen.dart';
-import '../../presentation/screens/locatarios/locatarios_list_screen.dart';
-import '../../presentation/screens/locatarios/locatario_form_screen.dart';
-import '../../presentation/screens/vinculos/vinculos_list_screen.dart';
-import '../../presentation/screens/vinculos/vinculo_form_screen.dart';
-import '../../presentation/screens/resumo/resumo_financeiro_screen.dart';
+import '../../../presentation/widgets/app_scaffold.dart';
+import '../../../presentation/screens/dashboard/dashboard_screen.dart';
+import '../../../presentation/screens/imobiliarias/imobiliarias_list_screen.dart';
+import '../../../presentation/screens/imobiliarias/imobiliaria_form_screen.dart';
+import '../../../presentation/screens/casas/casas_list_screen.dart';
+import '../../../presentation/screens/casas/casa_form_screen.dart';
+import '../../../presentation/screens/locatarios/locatarios_list_screen.dart';
+import '../../../presentation/screens/locatarios/locatario_form_screen.dart';
+import '../../../presentation/screens/vinculos/vinculos_list_screen.dart';
+import '../../../presentation/screens/vinculos/vinculo_form_screen.dart';
+import '../../../presentation/screens/resumo/resumo_financeiro_screen.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
@@ -42,8 +42,8 @@ final appRouter = GoRouter(
             GoRoute(
               path: ':id',
               name: 'imobiliaria-edit',
-              builder: (_, st) =>
-                  ImobiliariaFormScreen(id: int.tryParse(st.pathParameters['id'] ?? '')),
+              builder: (_, st) => ImobiliariaFormScreen(
+                  id: int.tryParse(st.pathParameters['id'] ?? '')),
             ),
           ],
         ),
@@ -61,8 +61,8 @@ final appRouter = GoRouter(
             GoRoute(
               path: ':id',
               name: 'casa-edit',
-              builder: (_, st) =>
-                  CasaFormScreen(id: int.tryParse(st.pathParameters['id'] ?? '')),
+              builder: (_, st) => CasaFormScreen(
+                  id: int.tryParse(st.pathParameters['id'] ?? '')),
             ),
           ],
         ),
@@ -80,8 +80,8 @@ final appRouter = GoRouter(
             GoRoute(
               path: ':id',
               name: 'locatario-edit',
-              builder: (_, st) =>
-                  LocatarioFormScreen(id: int.tryParse(st.pathParameters['id'] ?? '')),
+              builder: (_, st) => LocatarioFormScreen(
+                  id: int.tryParse(st.pathParameters['id'] ?? '')),
             ),
           ],
         ),
@@ -99,8 +99,8 @@ final appRouter = GoRouter(
             GoRoute(
               path: ':id',
               name: 'vinculo-edit',
-              builder: (_, st) =>
-                  VinculoFormScreen(id: int.tryParse(st.pathParameters['id'] ?? '')),
+              builder: (_, st) => VinculoFormScreen(
+                  id: int.tryParse(st.pathParameters['id'] ?? '')),
             ),
           ],
         ),

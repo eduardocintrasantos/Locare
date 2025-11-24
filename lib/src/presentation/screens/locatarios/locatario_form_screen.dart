@@ -34,6 +34,7 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
   final fTelCtrl = TextEditingController();
   final fCelCtrl = TextEditingController();
   Locatario? _loaded;
+  bool _isSaving = false;
 
   // Máscaras
   final cpfMask = MaskTextInputFormatter(
@@ -146,8 +147,6 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final saving = ref.watch(locatarioActionsProvider).isLoading;
-
     return Scaffold(
       appBar: AppBar(
           title:
@@ -252,11 +251,13 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: saving
+            FilledButton(
+              onPressed: _isSaving
                   ? null
                   : () async {
                       if (!_formKey.currentState!.validate()) return;
+
+                      setState(() => _isSaving = true);
 
                       final m = (_loaded ?? Locatario())
                         ..nome = nomeCtrl.text.trim()
@@ -293,40 +294,55 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
                         await ref
                             .read(locatarioActionsProvider.notifier)
                             .save(m);
+
+                        // Depois tenta salvar na API (se falhar, não tem problema)
+                        try {
+                          final locatarioMap = {
+                            'id': m.id,
+                            'nome': m.nome,
+                            'cpf': m.cpf,
+                            'rg': m.rg,
+                            'telefone': m.telefone,
+                            'celular': m.celular,
+                            'fiadorNome': m.fiadorNome,
+                            'fiadorCpf': m.fiadorCpf,
+                            'fiadorRg': m.fiadorRg,
+                            'fiadorTelefone': m.fiadorTelefone,
+                            'fiadorCelular': m.fiadorCelular,
+                          };
+                          await salvarLocatario(locatarioMap);
+                        } catch (e) {
+                          print('Falha ao salvar na API: $e');
+                        }
+
+                        if (mounted) Navigator.pop(context);
                       } catch (e) {
                         if (mounted) {
+                          setState(() => _isSaving = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text('Erro ao salvar localmente: $e')),
                           );
                         }
-                        return;
                       }
-
-                      // Depois tenta salvar na API (se falhar, não tem problema)
-                      try {
-                        final locatarioMap = {
-                          'id': m.id,
-                          'nome': m.nome,
-                          'cpf': m.cpf,
-                          'rg': m.rg,
-                          'telefone': m.telefone,
-                          'celular': m.celular,
-                          'fiadorNome': m.fiadorNome,
-                          'fiadorCpf': m.fiadorCpf,
-                          'fiadorRg': m.fiadorRg,
-                          'fiadorTelefone': m.fiadorTelefone,
-                          'fiadorCelular': m.fiadorCelular,
-                        };
-                        await salvarLocatario(locatarioMap);
-                      } catch (e) {
-                        print('Falha ao salvar na API: $e');
-                      }
-
-                      if (mounted) Navigator.pop(context);
                     },
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Salvar'),
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.save_outlined),
+                        SizedBox(width: 8),
+                        Text('Salvar'),
+                      ],
+                    ),
             ),
           ],
         ),

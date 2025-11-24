@@ -31,6 +31,7 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
   final bairroCtrl = TextEditingController();
   int? imobiliariaId;
   Casa? _loaded;
+  bool _isSaving = false;
 
   // Máscara para CEP
   final cepMask = MaskTextInputFormatter(
@@ -85,7 +86,6 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
   @override
   Widget build(BuildContext context) {
     final imobs = ref.watch(imobiliariasListProvider).value ?? [];
-    final saving = ref.watch(casaActionsProvider).isLoading;
 
     return Scaffold(
       appBar:
@@ -143,11 +143,13 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
               onChanged: (v) => setState(() => imobiliariaId = v),
             ),
             const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: saving
+            FilledButton(
+              onPressed: _isSaving
                   ? null
                   : () async {
                       if (!_formKey.currentState!.validate()) return;
+
+                      setState(() => _isSaving = true);
 
                       final m = (_loaded ?? Casa())
                         ..descricao = descricaoCtrl.text.trim()
@@ -167,36 +169,61 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
 
                       // Salva localmente primeiro
                       try {
+                        print('Iniciando salvamento local...');
                         await ref.read(casaActionsProvider.notifier).save(m);
-                      } catch (e) {
+                        print('Salvamento local concluído!');
+
+                        // Depois tenta salvar na API (se falhar, não tem problema)
+                        try {
+                          print('Tentando salvar na API...');
+                          final casaMap = {
+                            'descricao': m.descricao,
+                            'rua': m.rua,
+                            'numero': m.numero,
+                            'cep': m.cep,
+                            'bairro': m.bairro,
+                            'imobiliariaId': m.imobiliariaId,
+                          };
+                          await salvarCasa(casaMap);
+                          print('API: Sucesso!');
+                        } catch (e) {
+                          print('Falha ao salvar na API: $e');
+                        }
+
+                        print('Verificando mounted: $mounted');
                         if (mounted) {
+                          print('Executando Navigator.pop...');
+                          Navigator.pop(context);
+                        }
+                      } catch (e, stackTrace) {
+                        print('Erro ao salvar localmente: $e');
+                        print('StackTrace: $stackTrace');
+                        if (mounted) {
+                          setState(() => _isSaving = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text('Erro ao salvar localmente: $e')),
                           );
                         }
-                        return;
                       }
-
-                      // Depois tenta salvar na API (se falhar, não tem problema)
-                      try {
-                        final casaMap = {
-                          'descricao': m.descricao,
-                          'rua': m.rua,
-                          'numero': m.numero,
-                          'cep': m.cep,
-                          'bairro': m.bairro,
-                          'imobiliariaId': m.imobiliariaId,
-                        };
-                        await salvarCasa(casaMap);
-                      } catch (e) {
-                        print('Falha ao salvar na API: $e');
-                      }
-
-                      if (mounted) Navigator.pop(context);
                     },
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Salvar'),
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.save_outlined),
+                        SizedBox(width: 8),
+                        Text('Salvar'),
+                      ],
+                    ),
             ),
           ],
         ),

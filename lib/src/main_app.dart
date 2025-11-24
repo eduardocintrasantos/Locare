@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'app/router/app_router.dart';
-import 'app/theme/app_theme.dart';
+import 'core/app/router/app_router.dart';
+import 'core/app/theme/app_theme.dart';
 
 class MainApp extends StatelessWidget {
   const MainApp({super.key});

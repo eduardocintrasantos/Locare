@@ -32,6 +32,7 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
   final telCtrl = TextEditingController();
   final contatoCtrl = TextEditingController();
   Imobiliaria? _loaded;
+  bool _isSaving = false;
 
   // Máscaras
   final cnpjMask = MaskTextInputFormatter(
@@ -121,8 +122,6 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final saving = ref.watch(imobiliariaActionsProvider).isLoading;
-
     return Scaffold(
       appBar: AppBar(
           title: Text(
@@ -203,11 +202,13 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
                 decoration: const InputDecoration(labelText: 'Nome contato'),
                 controller: contatoCtrl),
             const SizedBox(height: 16),
-            FilledButton.icon(
-              onPressed: saving
+            FilledButton(
+              onPressed: _isSaving
                   ? null
                   : () async {
                       if (!_formKey.currentState!.validate()) return;
+
+                      setState(() => _isSaving = true);
 
                       final m = (_loaded ?? Imobiliaria())
                         ..nome = nomeCtrl.text.trim()
@@ -238,38 +239,53 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
                         await ref
                             .read(imobiliariaActionsProvider.notifier)
                             .save(m);
+
+                        // Depois tenta salvar na API (se falhar, não tem problema)
+                        try {
+                          final imobiliariaMap = {
+                            "id": m.id,
+                            "nome": m.nome,
+                            "cnpj": m.cnpj,
+                            "rua": m.rua,
+                            "cep": m.cep,
+                            "bairro": m.bairro,
+                            "numero": m.numero,
+                            "telefone": m.telefone,
+                            "nomeContato": m.nomeContato,
+                          };
+                          await salvarImobiliaria(imobiliariaMap);
+                        } catch (e) {
+                          print('Falha ao salvar na API: $e');
+                        }
+
+                        if (mounted) Navigator.pop(context);
                       } catch (e) {
                         if (mounted) {
+                          setState(() => _isSaving = false);
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                                 content: Text('Erro ao salvar localmente: $e')),
                           );
                         }
-                        return;
                       }
-
-                      // Depois tenta salvar na API (se falhar, não tem problema)
-                      try {
-                        final imobiliariaMap = {
-                          "id": m.id,
-                          "nome": m.nome,
-                          "cnpj": m.cnpj,
-                          "rua": m.rua,
-                          "cep": m.cep,
-                          "bairro": m.bairro,
-                          "numero": m.numero,
-                          "telefone": m.telefone,
-                          "nomeContato": m.nomeContato,
-                        };
-                        await salvarImobiliaria(imobiliariaMap);
-                      } catch (e) {
-                        print('Falha ao salvar na API: $e');
-                      }
-
-                      if (mounted) Navigator.pop(context);
                     },
-              icon: const Icon(Icons.save_outlined),
-              label: const Text('Salvar'),
+              child: _isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.save_outlined),
+                        SizedBox(width: 8),
+                        Text('Salvar'),
+                      ],
+                    ),
             ),
           ],
         ),

@@ -50,6 +50,7 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
   final fimCtrl = TextEditingController();
 
   Vinculo? _loaded;
+  bool _isSaving = false;
 
   @override
   void initState() {
@@ -140,7 +141,6 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
     final imobs = ref.watch(imobiliariasListProvider).value ?? [];
     final locs = ref.watch(locatariosListProvider).value ?? [];
     final vinculos = ref.watch(vinculosListProvider).value ?? [];
-    final saving = ref.watch(vinculoActionsProvider).isLoading;
 
     // IDs de casas e locatários com vínculos ATIVOS (fim = null)
     final casasComVinculoAtivo = <int>{};
@@ -217,7 +217,7 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
         actions: [
           if (_loaded != null && !_readOnly)
             TextButton.icon(
-              onPressed: saving
+              onPressed: _isSaving
                   ? null
                   : () async {
                       final ok = await confirmDialog(context,
@@ -392,12 +392,14 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: saving
+                FilledButton(
+                  onPressed: _isSaving
                       ? null
                       : () async {
                           if (!_formKey.currentState!.validate()) return;
                           if (casaId == null || imobiliariaId == null) return;
+
+                          setState(() => _isSaving = true);
 
                           final v = (_loaded ?? Vinculo())
                             ..casaId = casaId!
@@ -415,39 +417,55 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                             await ref
                                 .read(vinculoActionsProvider.notifier)
                                 .save(v);
+
+                            // Depois tenta salvar na API (se falhar, não tem problema)
+                            try {
+                              final vinculoMap = {
+                                'id': v.id,
+                                'casaId': v.casaId,
+                                'imobiliariaId': v.imobiliariaId,
+                                'locatarioId': v.locatarioId,
+                                'valorAluguel': v.valorAluguel,
+                                'taxaPercent': v.taxaPercent,
+                                'taxaValor': v.taxaValor,
+                                'inicio': v.inicio.toIso8601String(),
+                                'fim': v.fim?.toIso8601String(),
+                              };
+                              await salvarVinculo(vinculoMap);
+                            } catch (e) {
+                              print('Falha ao salvar na API: $e');
+                            }
+
+                            if (mounted) Navigator.pop(context);
                           } catch (e) {
                             if (mounted) {
+                              setState(() => _isSaving = false);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
                                     content:
                                         Text('Erro ao salvar localmente: $e')),
                               );
                             }
-                            return;
                           }
-
-                          // Depois tenta salvar na API (se falhar, não tem problema)
-                          try {
-                            final vinculoMap = {
-                              'id': v.id,
-                              'casaId': v.casaId,
-                              'imobiliariaId': v.imobiliariaId,
-                              'locatarioId': v.locatarioId,
-                              'valorAluguel': v.valorAluguel,
-                              'taxaPercent': v.taxaPercent,
-                              'taxaValor': v.taxaValor,
-                              'inicio': v.inicio.toIso8601String(),
-                              'fim': v.fim?.toIso8601String(),
-                            };
-                            await salvarVinculo(vinculoMap);
-                          } catch (e) {
-                            print('Falha ao salvar na API: $e');
-                          }
-
-                          if (mounted) Navigator.pop(context);
                         },
-                  icon: const Icon(Icons.save_outlined),
-                  label: const Text('Salvar'),
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.save_outlined),
+                            SizedBox(width: 8),
+                            Text('Salvar'),
+                          ],
+                        ),
                 ),
               ],
             ),

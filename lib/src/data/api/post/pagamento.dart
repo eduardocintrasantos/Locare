@@ -13,11 +13,13 @@ Future<void> salvarPagamento(Map<String, dynamic> pagamento) async {
 
   try {
     print('🔵 Enviando requisição POST...');
-    final response = await http.post(
-      url,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(pagamento),
-    );
+    final response = await http
+        .post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode(pagamento),
+        )
+        .timeout(const Duration(seconds: 3));
 
     print('🔵 Status code: ${response.statusCode}');
     print('🔵 Response body: ${response.body}');
