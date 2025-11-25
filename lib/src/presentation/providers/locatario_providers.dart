@@ -4,11 +4,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/locatario.dart';
 import '../../domain/repositories/locatario_repo.dart';
-import 'db_provider.dart';
 import '_repos_provider.dart';
 
 final locatariosListProvider = FutureProvider<List<Locatario>>((ref) async {
-  await ref.watch(isarProvider.future);
   final repo = ref.read(locatarioRepoProvider);
   return repo.list();
 });

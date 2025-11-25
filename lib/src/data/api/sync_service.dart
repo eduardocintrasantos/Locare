@@ -1,4 +1,4 @@
-import 'package:http/http.dart' as http;
+/*import 'package:http/http.dart' as http;
 import 'package:locare/src/data/api/post/imobiliaria.dart';
 import 'package:locare/src/data/api/post/casa.dart';
 import 'package:locare/src/data/sources/isar_source.dart';
@@ -59,4 +59,4 @@ Future<bool> existeCasaNoBackend(int id) async {
   final url = Uri.parse('http://192.168.0.244:8080/casa/$id');
   final response = await http.get(url);
   return response.statusCode == 200;
-}
+}*/

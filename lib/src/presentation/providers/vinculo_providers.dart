@@ -4,16 +4,14 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/vinculo.dart';
 import '../../domain/repositories/vinculo_repo.dart';
-import 'db_provider.dart';
 import '_repos_provider.dart';
 
 final vinculoFiltroCasaProvider = StateProvider<int?>((_) => null);
 final vinculoFiltroImobProvider = StateProvider<int?>((_) => null);
-final vinculoFiltroLocProvider  = StateProvider<int?>((_) => null);
+final vinculoFiltroLocProvider = StateProvider<int?>((_) => null);
 final vinculoApenasAtivosProvider = StateProvider<bool>((_) => false);
 
 final vinculosListProvider = FutureProvider<List<Vinculo>>((ref) async {
-  await ref.watch(isarProvider.future);
   final repo = ref.read(vinculoRepoProvider);
   return repo.list(
     casaId: ref.watch(vinculoFiltroCasaProvider),

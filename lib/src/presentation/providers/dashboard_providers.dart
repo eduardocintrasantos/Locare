@@ -28,7 +28,7 @@ final dashboardSelectedMonthProvider =
     StateProvider<DateTime>((ref) => DateTime.now());
 
 final dashboardResumoMesProvider = FutureProvider<DashboardResumo>((ref) async {
-  await ref.watch(isarProvider.future);
+  //await ref.watch(isarProvider.future);
   final sel = ref.watch(dashboardSelectedMonthProvider);
   final ano = sel.year;
   final mes = sel.month;
@@ -84,7 +84,7 @@ class TaxaMes {
 }
 
 final dashboardUltimos12Provider = FutureProvider<List<TaxaMes>>((ref) async {
-  await ref.watch(isarProvider.future);
+  //await ref.watch(isarProvider.future);
   final vincRepo = ref.read(vinculoRepoProvider);
 
   final now = DateTime.now();
@@ -131,7 +131,7 @@ class ImobiliariaTaxa {
 
 final dashboardTaxaPorImobiliariaProvider =
     FutureProvider<List<ImobiliariaTaxa>>((ref) async {
-  await ref.watch(isarProvider.future);
+  //await ref.watch(isarProvider.future);
   final sel = ref.watch(dashboardSelectedMonthProvider);
   final ano = sel.year;
   final mes = sel.month;

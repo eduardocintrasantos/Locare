@@ -1,13 +1,8 @@
 // src/domain/entities/locatario.dart
-// Entidade Locatario no Isar.
+// Entidade Locatario.
 
-import 'package:isar/isar.dart';
-
-part 'locatario.g.dart';
-
-@collection
 class Locatario {
-  Id id = Isar.autoIncrement;
+  int id = 0;
 
   late String nome; // *
   String? cpf;

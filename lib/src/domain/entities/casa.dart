@@ -1,13 +1,8 @@
 // src/domain/entities/casa.dart
-// Entidade Casa no Isar.
+// Entidade Casa.
 
-import 'package:isar/isar.dart';
-
-part 'casa.g.dart';
-
-@collection
 class Casa {
-  Id id = Isar.autoIncrement;
+  int id = 0;
 
   late String descricao; // *
   String? rua;

@@ -10,7 +10,6 @@ import '../../domain/repositories/pagamento_repo.dart';
 import '../../domain/repositories/casa_repo.dart';
 import '../../domain/repositories/imobiliaria_repo.dart';
 import '_repos_provider.dart';
-import 'db_provider.dart';
 import '../../data/api/post/pagamento.dart';
 
 class ResumoFiltro {
@@ -52,7 +51,6 @@ class ResumoItem {
 }
 
 final resumoItensProvider = FutureProvider<List<ResumoItem>>((ref) async {
-  await ref.watch(isarProvider.future);
   final filtro = ref.watch(resumoFiltroProvider);
   final vincRepo = ref.read(vinculoRepoProvider);
   final pgRepo = ref.read(pagamentoRepoProvider);

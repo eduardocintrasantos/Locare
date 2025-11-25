@@ -1,6 +1,6 @@
 // src/data/repositories/vinculo_repo_isar.dart
 
-import 'package:isar/isar.dart';
+/*import 'package:isar/isar.dart';
 import '../../domain/entities/vinculo.dart';
 import '../../domain/repositories/vinculo_repo.dart';
 import '../sources/isar_source.dart';
@@ -98,3 +98,4 @@ class VinculoRepoIsar implements VinculoRepo {
     await isar.vinculos.delete(id); // dentro de txn já tá ok
   }
 }
+*/

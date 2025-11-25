@@ -1,7 +1,7 @@
 // src/presentation/providers/db_provider.dart
 // Expõe FutureProvider<Isar> e seed opcional.
 
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+/*import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import '../../data/sources/isar_source.dart';
@@ -16,3 +16,4 @@ final isarProvider = FutureProvider<Isar>((ref) async {
   }*/
   return src.db;
 });
+*/

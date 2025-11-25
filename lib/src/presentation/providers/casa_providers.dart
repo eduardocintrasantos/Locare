@@ -4,13 +4,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/casa.dart';
 import '../../domain/repositories/casa_repo.dart';
-import 'db_provider.dart';
 import '_repos_provider.dart';
 
 final casasFiltroImobiliariaProvider = StateProvider<int?>((_) => null);
 
 final casasListProvider = FutureProvider<List<Casa>>((ref) async {
-  await ref.watch(isarProvider.future);
   final repo = ref.read(casaRepoProvider);
   final imId = ref.watch(casasFiltroImobiliariaProvider);
   return repo.list(imobiliariaId: imId);

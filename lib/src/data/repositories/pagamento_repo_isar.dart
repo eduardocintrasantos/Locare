@@ -1,7 +1,7 @@
 // src/data/repositories/pagamento_repo_isar.dart
 // Marca/estorna recebimento por (vinculoId, ano, mes).
 
-import 'package:isar/isar.dart';
+/*import 'package:isar/isar.dart';
 import '../../domain/entities/pagamento.dart';
 import '../../domain/repositories/pagamento_repo.dart';
 import '../sources/isar_source.dart';
@@ -79,4 +79,4 @@ class PagamentoRepoIsar implements PagamentoRepo {
     final isar = await source.db;
     return isar.pagamentos.filter().anoEqualTo(ano).and().mesEqualTo(mes).findAll();
   }
-}
+}*/

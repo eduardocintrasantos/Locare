@@ -1,7 +1,7 @@
 // src/data/repositories/imobiliaria_repo_isar.dart
 // Implementação Isar de ImobiliariaRepo.
 
-import 'package:isar/isar.dart';
+/*import 'package:isar/isar.dart';
 import '../../domain/entities/imobiliaria.dart';
 import '../../domain/repositories/imobiliaria_repo.dart';
 import '../sources/isar_source.dart';
@@ -44,3 +44,4 @@ class ImobiliariaRepoIsar implements ImobiliariaRepo {
     await isar.writeTxn(() => isar.imobiliarias.delete(id));
   }
 }
+*/

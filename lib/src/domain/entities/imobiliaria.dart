@@ -1,13 +1,8 @@
 // src/domain/entities/imobiliaria.dart
-// Entidade Imobiliaria no Isar.
+// Entidade Imobiliaria.
 
-import 'package:isar/isar.dart';
-
-part 'imobiliaria.g.dart';
-
-@collection
 class Imobiliaria {
-  Id id = Isar.autoIncrement;
+  int id = 0;
 
   late String nome; // *
   String? cnpj;

@@ -15,10 +15,38 @@ import '../../../presentation/screens/locatarios/locatario_form_screen.dart';
 import '../../../presentation/screens/vinculos/vinculos_list_screen.dart';
 import '../../../presentation/screens/vinculos/vinculo_form_screen.dart';
 import '../../../presentation/screens/resumo/resumo_financeiro_screen.dart';
+import '../../../presentation/screens/login_screen.dart';
+import '../../auth/auth_service.dart';
 
 final appRouter = GoRouter(
   initialLocation: '/',
+  redirect: (context, state) {
+    final authService = AuthService();
+    final isAuthenticated = authService.isAuthenticated;
+    final isLoginRoute = state.matchedLocation == '/login';
+
+    // Se não está autenticado e não está na tela de login, redireciona para login
+    if (!isAuthenticated && !isLoginRoute) {
+      return '/login';
+    }
+
+    // Se está autenticado e está tentando acessar login, redireciona para home
+    if (isAuthenticated && isLoginRoute) {
+      return '/';
+    }
+
+    return null; // Não redireciona
+  },
   routes: [
+    // Rota de Login (fora do ShellRoute)
+    GoRoute(
+      path: '/login',
+      name: 'login',
+      pageBuilder: (context, state) =>
+          const NoTransitionPage(child: LoginScreen()),
+    ),
+
+    // Rotas protegidas (dentro do ShellRoute)
     ShellRoute(
       builder: (context, state, child) => AppScaffold(child: child),
       routes: [

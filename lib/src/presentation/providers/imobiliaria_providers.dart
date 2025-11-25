@@ -4,12 +4,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/imobiliaria.dart';
 import '../../domain/repositories/imobiliaria_repo.dart';
-import 'db_provider.dart';
 import '_repos_provider.dart';
 
 final imobiliariasListProvider = FutureProvider<List<Imobiliaria>>((ref) async {
-  // Garante DB aberto
-  await ref.watch(isarProvider.future);
   final repo = ref.read(imobiliariaRepoProvider);
   return repo.list();
 });

@@ -1,7 +1,6 @@
 // src/core/db/isar_db.dart
 // Abre o Isar uma única vez.
 
-import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/foundation.dart';
 
@@ -11,7 +10,7 @@ import '../../domain/entities/locatario.dart';
 import '../../domain/entities/vinculo.dart';
 import '../../domain/entities/pagamento.dart';
 
-class IsarDb {
+/*class IsarDb {
   static Isar? _instance;
 
   static Future<Isar> get instance async {
@@ -35,4 +34,4 @@ class IsarDb {
       inspector: kDebugMode,
     );
   }
-}
+}*/

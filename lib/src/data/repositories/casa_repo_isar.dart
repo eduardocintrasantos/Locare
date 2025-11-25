@@ -1,7 +1,7 @@
 // src/data/repositories/casa_repo_isar.dart
 // Implementação Isar de CasaRepo (com filtro por imobiliariaId).
 
-import 'package:isar/isar.dart';
+/*import 'package:isar/isar.dart';
 import '../../domain/entities/casa.dart';
 import '../../domain/repositories/casa_repo.dart';
 import '../sources/isar_source.dart';
@@ -43,3 +43,4 @@ class CasaRepoIsar implements CasaRepo {
     await isar.writeTxn(() => isar.casas.delete(id));
   }
 }
+*/

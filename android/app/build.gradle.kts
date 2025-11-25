@@ -8,12 +8,12 @@ android {
     namespace = "com.example.locare"
 
     // FIXAR MANUALMENTE (recomendado)
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.example.locare"
         minSdk = flutter.minSdkVersion
-        targetSdk = 34
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }

@@ -1,13 +1,8 @@
 // src/domain/entities/pagamento.dart
 // Entidade Pagamento por (vinculoId, ano, mes). Marca recebido/estornado.
 
-import 'package:isar/isar.dart';
-
-part 'pagamento.g.dart';
-
-@collection
 class Pagamento {
-  Id id = Isar.autoIncrement;
+  int id = 0;
 
   late int vinculoId; // *
   late int ano; // *

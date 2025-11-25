@@ -1,7 +1,7 @@
 // src/data/repositories/locatario_repo_isar.dart
 // Implementação Isar de LocatarioRepo.
 
-import 'package:isar/isar.dart';
+/*import 'package:isar/isar.dart';
 import '../../domain/entities/locatario.dart';
 import '../../domain/repositories/locatario_repo.dart';
 import '../sources/isar_source.dart';
@@ -39,4 +39,4 @@ class LocatarioRepoIsar implements LocatarioRepo {
     final isar = await source.db;
     await isar.writeTxn(() => isar.locatarios.delete(id));
   }
-}
+}*/
