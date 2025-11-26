@@ -1,11 +1,13 @@
 // src/presentation/widgets/app_scaffold.dart
 // Shell com NavigationBar (6 abas). onTap troca rota conforme índice.
+// Inclui verificação de acesso (trial ou premium).
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/auth/auth_service.dart';
+import 'access_guard.dart';
 
-class AppScaffold extends StatelessWidget {
+class AppScaffold extends ConsumerWidget {
   final Widget child;
   const AppScaffold({super.key, required this.child});
 
@@ -23,57 +25,31 @@ class AppScaffold extends StatelessWidget {
     return i >= 0 ? i : 0;
   }
 
-  Future<void> _handleLogout(BuildContext context) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Sair'),
-        content: const Text('Deseja realmente sair do sistema?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Sair'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirm == true && context.mounted) {
-      final authService = AuthService();
-      await authService.logout();
-      if (context.mounted) {
-        context.go('/login');
-      }
-    }
-  }
-
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.toString();
     final currentIndex = _indexFromLocation(location);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Locare Admin'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sair',
-            onPressed: () => _handleLogout(context),
-          ),
-        ],
-      ),
-      body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: currentIndex,
-        onDestinationSelected: (i) => context.go(_tabs[i].$1),
-        destinations: _tabs
-            .map((t) => NavigationDestination(icon: Icon(t.$3), label: t.$2))
-            .toList(),
+    return AccessGuard(
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Locare'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.account_circle_outlined),
+              tooltip: 'Minha Conta',
+              onPressed: () => context.push('/conta'),
+            ),
+          ],
+        ),
+        body: child,
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: currentIndex,
+          onDestinationSelected: (i) => context.go(_tabs[i].$1),
+          destinations: _tabs
+              .map((t) => NavigationDestination(icon: Icon(t.$3), label: t.$2))
+              .toList(),
+        ),
       ),
     );
   }

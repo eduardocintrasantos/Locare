@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
 import '../../domain/entities/locatario.dart';
 import '../../domain/repositories/locatario_repo.dart';
+import '../../core/auth/auth_service.dart';
 
 final _log = Logger('LocatarioRepoSupabase');
 
@@ -59,6 +60,7 @@ class LocatarioRepoSupabase implements LocatarioRepo {
               'fiador_rg': model.fiadorRg,
               'fiador_telefone': model.fiadorTelefone,
               'fiador_celular': model.fiadorCelular,
+              'usuario_id': AuthService.currentUserId,
             })
             .select()
             .single();

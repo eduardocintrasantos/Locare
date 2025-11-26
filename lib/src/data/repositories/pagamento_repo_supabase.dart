@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
 import '../../domain/entities/pagamento.dart';
 import '../../domain/repositories/pagamento_repo.dart';
+import '../../core/auth/auth_service.dart';
 
 final _log = Logger('PagamentoRepoSupabase');
 
@@ -15,6 +16,9 @@ class PagamentoRepoSupabase implements PagamentoRepo {
   @override
   Future<Pagamento?> getByVinculoAnoMes(int vinculoId, int ano, int mes) async {
     try {
+      _log.info(
+          '🔍 Buscando pagamento: vinculo=$vinculoId, ano=$ano, mes=$mes');
+
       final response = await _supabase
           .from(_tableName)
           .select()
@@ -23,8 +27,15 @@ class PagamentoRepoSupabase implements PagamentoRepo {
           .eq('mes', mes)
           .maybeSingle();
 
-      if (response == null) return null;
-      return _fromJson(response);
+      if (response == null) {
+        _log.info('🔍 Pagamento não encontrado');
+        return null;
+      }
+
+      final pg = _fromJson(response);
+      _log.info(
+          '🔍 Pagamento encontrado: id=${pg.id}, recebido=${pg.recebido}');
+      return pg;
     } catch (e) {
       _log.severe('❌ Erro ao buscar pagamento: $e');
       rethrow;
@@ -62,6 +73,7 @@ class PagamentoRepoSupabase implements PagamentoRepo {
               'mes': mes,
               'recebido': true,
               'recebido_em': DateTime.now().toIso8601String(),
+              'usuario_id': AuthService.currentUserId,
             })
             .select()
             .single();
@@ -105,6 +117,7 @@ class PagamentoRepoSupabase implements PagamentoRepo {
               'mes': mes,
               'recebido': false,
               'recebido_em': null,
+              'usuario_id': AuthService.currentUserId,
             })
             .select()
             .single();

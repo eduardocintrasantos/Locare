@@ -2,20 +2,22 @@
 // Tela de Login
 
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/auth/auth_service.dart';
+import '../providers/auth_provider.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
+  ConsumerState<LoginScreen> createState() => _LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class _LoginScreenState extends ConsumerState<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController(text: 'admin@locare.com');
-  final _passwordController = TextEditingController(text: 'admin123');
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _authService = AuthService();
 
   bool _isLoading = false;
@@ -40,8 +42,16 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (mounted) {
-        // Login bem-sucedido - navegar para home
-        context.go('/');
+        // Incrementar o dataRefreshProvider para forçar todos os providers a recarregar
+        ref.read(dataRefreshProvider.notifier).state++;
+
+        // Pequeno delay para garantir que o auth está completamente pronto
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (mounted) {
+          // Login bem-sucedido - navegar para home
+          context.go('/');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -188,6 +198,23 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                       ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Link para Cadastro
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Não tem uma conta? ',
+                          style: TextStyle(color: Colors.grey[600]),
+                        ),
+                        TextButton(
+                          onPressed: () => context.go('/cadastro'),
+                          child: const Text('Cadastre-se'),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 16),

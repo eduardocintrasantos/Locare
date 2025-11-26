@@ -1,5 +1,6 @@
 // src/domain/entities/casa.dart
 // Entidade Casa.
+// Nota: O vínculo com Imobiliária é feito apenas na tabela TVINCULOS.
 
 class Casa {
   int id = 0;
@@ -10,7 +11,7 @@ class Casa {
   String? cep;
   String? bairro;
 
-  int? imobiliariaId; // referência simples por ID
+  // O vínculo com imobiliária é feito na tabela TVINCULOS, não diretamente aqui
 
   late DateTime createdAt;
   DateTime? updatedAt;
@@ -23,7 +24,6 @@ class Casa {
       'numero': numero,
       'cep': cep,
       'bairro': bairro,
-      'imobiliariaId': imobiliariaId,
     };
   }
 }

@@ -5,12 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/vinculo.dart';
 import '../../domain/entities/casa.dart';
 import '../../domain/entities/imobiliaria.dart';
-import '../../domain/repositories/vinculo_repo.dart';
 import '../../domain/repositories/pagamento_repo.dart';
-import '../../domain/repositories/casa_repo.dart';
-import '../../domain/repositories/imobiliaria_repo.dart';
 import '_repos_provider.dart';
-import '../../data/api/post/pagamento.dart';
+import 'auth_provider.dart';
 
 class ResumoFiltro {
   final int ano;
@@ -51,17 +48,23 @@ class ResumoItem {
 }
 
 final resumoItensProvider = FutureProvider<List<ResumoItem>>((ref) async {
+  // Observa o refresh para recarregar quando usuário muda
+  ref.watch(dataRefreshProvider);
   final filtro = ref.watch(resumoFiltroProvider);
   final vincRepo = ref.read(vinculoRepoProvider);
   final pgRepo = ref.read(pagamentoRepoProvider);
   final casaRepo = ref.read(casaRepoProvider);
   final imRepo = ref.read(imobiliariaRepoProvider);
 
+  print('📊 Buscando resumo para ${filtro.mes}/${filtro.ano}');
+
   // Vínculos ativos no mês/ano: início <= último dia do mês && (fim == null || fim >= primeiro dia)
   final primeiro = DateTime(filtro.ano, filtro.mes, 1);
   final ultimo = DateTime(filtro.ano, filtro.mes + 1, 0);
 
   final todos = await vincRepo.list(apenasAtivos: false);
+  print('📊 Total de vínculos: ${todos.length}');
+
   final ativosNoPeriodo = todos.where((v) {
     final iniOk = !v.inicio.isAfter(ultimo);
     final fimOk = (v.fim == null) || !v.fim!.isBefore(primeiro);
@@ -70,6 +73,8 @@ final resumoItensProvider = FutureProvider<List<ResumoItem>>((ref) async {
         (filtro.imobiliariaId == null ||
             v.imobiliariaId == filtro.imobiliariaId);
   }).toList();
+
+  print('📊 Vínculos ativos no período: ${ativosNoPeriodo.length}');
 
   final casas = {for (final c in await casaRepo.list()) c.id: c};
   final imobs = {for (final i in await imRepo.list()) i.id: i};
@@ -86,6 +91,8 @@ final resumoItensProvider = FutureProvider<List<ResumoItem>>((ref) async {
 
     final pg = await pgRepo.getByVinculoAnoMes(v.id, filtro.ano, filtro.mes);
     final recebido = pg?.recebido == true;
+
+    print('📊 Vínculo ${v.id}: pagamento=${pg?.id}, recebido=$recebido');
 
     if (filtro.apenasRecebidos && !recebido) continue;
 
@@ -137,17 +144,6 @@ class ResumoActions extends StateNotifier<AsyncValue<void>> {
       };
       print('📦 Dados para API: $pagamentoMap');
       print('🚀 Iniciando chamada da API em background...');
-
-      salvarPagamento(pagamentoMap).timeout(
-        const Duration(seconds: 5),
-        onTimeout: () {
-          print('⏱️ Timeout ao salvar na API');
-        },
-      ).then((_) {
-        print('🌐 API chamada com sucesso!');
-      }).catchError((e) {
-        print('❌ Falha ao salvar pagamento na API: $e');
-      });
 
       print('✅ Toggle finalizado!');
     } catch (e, st) {

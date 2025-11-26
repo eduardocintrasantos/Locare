@@ -9,7 +9,6 @@ import '../../../core/formz_inputs/non_empty_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/locatario_providers.dart';
 import '../../providers/_repos_provider.dart';
-import '../../../data/api/post/locatario.dart';
 
 class LocatarioFormScreen extends ConsumerStatefulWidget {
   final int? id;
@@ -48,12 +47,12 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
   );
 
   final telMask = MaskTextInputFormatter(
-    mask: '(16) ####-####',
+    mask: '(##) ####-####',
     filter: {"#": RegExp(r'[0-9]')},
   );
 
   final celMask = MaskTextInputFormatter(
-    mask: '(16) #####-####',
+    mask: '(##) #####-####',
     filter: {"#": RegExp(r'[0-9]')},
   );
 
@@ -69,12 +68,12 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
   );
 
   final fTelMask = MaskTextInputFormatter(
-    mask: '(16) ####-####',
+    mask: '(##) ####-####',
     filter: {"#": RegExp(r'[0-9]')},
   );
 
   final fCelMask = MaskTextInputFormatter(
-    mask: '(16) #####-####',
+    mask: '(##) #####-####',
     filter: {"#": RegExp(r'[0-9]')},
   );
 
@@ -193,7 +192,7 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
                 Expanded(
                     child: TextField(
                         decoration: const InputDecoration(
-                            labelText: 'Telefone', hintText: '(16) 0000-0000'),
+                            labelText: 'Telefone', hintText: '(xx) xxxx-xxxx'),
                         controller: telCtrl,
                         keyboardType: TextInputType.phone,
                         inputFormatters: [telMask])),
@@ -201,7 +200,7 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
                 Expanded(
                     child: TextField(
                         decoration: const InputDecoration(
-                            labelText: 'Celular', hintText: '(16) 00000-0000'),
+                            labelText: 'Celular', hintText: '(xx) xxxxx-xxxx'),
                         controller: celCtrl,
                         keyboardType: TextInputType.phone,
                         inputFormatters: [celMask])),
@@ -236,7 +235,7 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
                 Expanded(
                     child: TextField(
                         decoration: const InputDecoration(
-                            labelText: 'Telefone', hintText: '(16) 0000-0000'),
+                            labelText: 'Telefone', hintText: '(xx) xxxx-xxxx'),
                         controller: fTelCtrl,
                         keyboardType: TextInputType.phone,
                         inputFormatters: [fTelMask])),
@@ -244,7 +243,7 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
                 Expanded(
                     child: TextField(
                         decoration: const InputDecoration(
-                            labelText: 'Celular', hintText: '(16) 00000-0000'),
+                            labelText: 'Celular', hintText: '(xx) xxxxx-xxxx'),
                         controller: fCelCtrl,
                         keyboardType: TextInputType.phone,
                         inputFormatters: [fCelMask])),
@@ -310,7 +309,6 @@ class _LocatarioFormScreenState extends ConsumerState<LocatarioFormScreen> {
                             'fiadorTelefone': m.fiadorTelefone,
                             'fiadorCelular': m.fiadorCelular,
                           };
-                          await salvarLocatario(locatarioMap);
                         } catch (e) {
                           print('Falha ao salvar na API: $e');
                         }

@@ -9,7 +9,6 @@ import '../../../presentation/providers/imobiliaria_providers.dart';
 import '../../../core/formz_inputs/non_empty_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/_repos_provider.dart';
-import '../../../data/api/post/imobiliaria.dart';
 
 class ImobiliariaFormScreen extends ConsumerStatefulWidget {
   final int? id;
@@ -45,14 +44,8 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
     filter: {"#": RegExp(r'[0-9]')},
   );
 
-  // Telefone com DDD automático (16)
+  // Telefone com máscara padrão
   final telMask = MaskTextInputFormatter(
-    mask: '(16) #####-####',
-    filter: {"#": RegExp(r'[0-9]')},
-  );
-
-  // Máscara alternativa para telefone (caso usuário apague DDD)
-  final telMaskAlt = MaskTextInputFormatter(
     mask: '(##) #####-####',
     filter: {"#": RegExp(r'[0-9]')},
   );
@@ -105,9 +98,7 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
       numeroCtrl.text = m.numero ?? '';
 
       if (m.telefone != null && m.telefone!.isNotEmpty) {
-        telMaskAlt.updateMask(
-            mask: '(##) #####-####', filter: {"#": RegExp(r'[0-9]')});
-        telCtrl.text = telMaskAlt.maskText(m.telefone!);
+        telCtrl.text = telMask.maskText(m.telefone!);
       }
 
       contatoCtrl.text = m.nomeContato ?? '';
@@ -182,20 +173,10 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
                 Expanded(
                     child: TextField(
                         decoration: const InputDecoration(
-                            labelText: 'Telefone', hintText: '(16) 99999-9999'),
+                            labelText: 'Telefone', hintText: '(xx) xxxxx-xxxx'),
                         controller: telCtrl,
                         keyboardType: TextInputType.phone,
-                        inputFormatters: [telMaskAlt],
-                        onChanged: (value) {
-                          // Se começar com (16), usa máscara com DDD fixo
-                          if (value.startsWith('(16)')) {
-                            setState(() {
-                              telCtrl.value = telMask.updateMask(
-                                  mask: '(16) #####-####',
-                                  filter: {"#": RegExp(r'[0-9]')});
-                            });
-                          }
-                        })),
+                        inputFormatters: [telMask])),
               ],
             ),
             TextField(
@@ -229,7 +210,7 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
                             : numeroCtrl.text.trim()
                         ..telefone = telCtrl.text.trim().isEmpty
                             ? null
-                            : telMaskAlt.getUnmaskedText()
+                            : telMask.getUnmaskedText()
                         ..nomeContato = contatoCtrl.text.trim().isEmpty
                             ? null
                             : contatoCtrl.text.trim();
@@ -253,7 +234,6 @@ class _ImobiliariaFormScreenState extends ConsumerState<ImobiliariaFormScreen> {
                             "telefone": m.telefone,
                             "nomeContato": m.nomeContato,
                           };
-                          await salvarImobiliaria(imobiliariaMap);
                         } catch (e) {
                           print('Falha ao salvar na API: $e');
                         }

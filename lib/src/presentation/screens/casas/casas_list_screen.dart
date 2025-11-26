@@ -1,42 +1,94 @@
-// Lista de casas com filtro por imobiliária.
+// Lista de casas.
+// Nota: O vínculo com Imobiliária é feito na aba de Vínculos.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/casa_providers.dart';
-import '../../providers/imobiliaria_providers.dart';
+import '../../providers/vinculo_check_provider.dart';
 import '../../../domain/entities/casa.dart';
-import '../../../domain/entities/imobiliaria.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/confirm_dialog.dart';
 
 class CasasListScreen extends ConsumerWidget {
   const CasasListScreen({super.key});
 
+  Future<void> _handleDelete(
+      BuildContext context, WidgetRef ref, Casa m) async {
+    final check = await ref.read(vinculosCasaProvider(m.id).future);
+
+    if (check.temVinculoAtivo) {
+      // Não pode excluir - tem vínculo ativo
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Não é possível excluir'),
+            content: Text(
+              'Esta casa possui ${check.quantidadeAtivos} vínculo(s) ativo(s).\n\n'
+              'Finalize todos os vínculos antes de excluir.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    if (check.temVinculoFinalizado) {
+      // Tem vínculos finalizados - avisar que vai excluir histórico
+      if (context.mounted) {
+        final ok = await confirmDialog(
+          context,
+          title: 'Excluir casa?',
+          message:
+              'Esta casa possui ${check.quantidadeFinalizados} vínculo(s) finalizado(s).\n\n'
+              'Ao excluir, todo o histórico será perdido.\n\n'
+              'Deseja continuar?',
+        );
+        if (!ok) return;
+      }
+    } else {
+      // Sem vínculos - confirmação simples
+      if (context.mounted) {
+        final ok = await confirmDialog(
+          context,
+          title: 'Excluir casa?',
+          message: 'Deseja excluir "${m.descricao}"?',
+        );
+        if (!ok) return;
+      }
+    }
+
+    // Excluir
+    try {
+      await ref.read(casaActionsProvider.notifier).remove(m.id);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Casa excluída')),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erro ao excluir: $e')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final imobs = ref.watch(imobiliariasListProvider).value ?? [];
-    final filtro = ref.watch(casasFiltroImobiliariaProvider);
     final lista = ref.watch(casasListProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Casas'),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: DropdownButton<int?>(
-              value: filtro,
-              hint: const Text('Imobiliária'),
-              underline: const SizedBox(),
-              onChanged: (val) => ref.read(casasFiltroImobiliariaProvider.notifier).state = val,
-              items: [
-                const DropdownMenuItem(value: null, child: Text('Todas')),
-                ...imobs.map((Imobiliaria i) =>
-                    DropdownMenuItem(value: i.id, child: Text(i.nome))),
-              ],
-            ),
-          )
-        ],
       ),
       body: lista.when(
         data: (items) {
@@ -48,11 +100,13 @@ class CasasListScreen extends ConsumerWidget {
               final Casa m = items[i];
               return ListTile(
                 title: Text(m.descricao),
-                subtitle: Text([m.rua, m.numero, m.bairro].where((e) => (e ?? '').isNotEmpty).join(', ')),
+                subtitle: Text([m.rua, m.numero, m.bairro]
+                    .where((e) => (e ?? '').isNotEmpty)
+                    .join(', ')),
                 onTap: () => context.push('/casas/${m.id}'),
                 trailing: IconButton(
                   icon: const Icon(Icons.delete_outline),
-                  onPressed: () => ref.read(casaActionsProvider.notifier).remove(m.id),
+                  onPressed: () => _handleDelete(context, ref, m),
                 ),
               );
             },

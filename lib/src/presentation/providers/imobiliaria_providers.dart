@@ -5,8 +5,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/imobiliaria.dart';
 import '../../domain/repositories/imobiliaria_repo.dart';
 import '_repos_provider.dart';
+import 'auth_provider.dart';
 
 final imobiliariasListProvider = FutureProvider<List<Imobiliaria>>((ref) async {
+  // Observa o refresh para recarregar quando usuário muda
+  ref.watch(dataRefreshProvider);
   final repo = ref.read(imobiliariaRepoProvider);
   return repo.list();
 });

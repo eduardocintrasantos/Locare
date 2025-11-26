@@ -1,16 +1,14 @@
-// Form de Casa: descrição* + endereço + dropdown de Imobiliária + "Alterado em".
+// Form de Casa: descrição* + endereço + "Alterado em".
+// O vínculo com Imobiliária é feito na aba de Vínculos.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:locare/src/data/api/post/casa.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../../../domain/entities/casa.dart';
-import '../../../domain/entities/imobiliaria.dart';
 import '../../../core/formz_inputs/non_empty_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/casa_providers.dart';
-import '../../providers/imobiliaria_providers.dart';
 import '../../../presentation/providers/_repos_provider.dart';
 
 class CasaFormScreen extends ConsumerStatefulWidget {
@@ -29,7 +27,6 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
   final numeroCtrl = TextEditingController();
   final cepCtrl = TextEditingController();
   final bairroCtrl = TextEditingController();
-  int? imobiliariaId;
   Casa? _loaded;
   bool _isSaving = false;
 
@@ -73,7 +70,6 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
       }
 
       bairroCtrl.text = m.bairro ?? '';
-      imobiliariaId = m.imobiliariaId;
     }
 
     setState(() {
@@ -85,8 +81,6 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final imobs = ref.watch(imobiliariasListProvider).value ?? [];
-
     return Scaffold(
       appBar:
           AppBar(title: Text(widget.id == null ? 'Nova Casa' : 'Editar Casa')),
@@ -130,18 +124,6 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
             TextField(
                 decoration: const InputDecoration(labelText: 'Bairro'),
                 controller: bairroCtrl),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<int?>(
-              decoration: const InputDecoration(labelText: 'Imobiliária'),
-              value: imobiliariaId,
-              items: [
-                const DropdownMenuItem(
-                    value: null, child: Text('Sem imobiliária')),
-                ...imobs.map((Imobiliaria i) =>
-                    DropdownMenuItem(value: i.id, child: Text(i.nome))),
-              ],
-              onChanged: (v) => setState(() => imobiliariaId = v),
-            ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _isSaving
@@ -164,45 +146,20 @@ class _CasaFormScreenState extends ConsumerState<CasaFormScreen> {
                             : cepMask.getUnmaskedText()
                         ..bairro = bairroCtrl.text.trim().isEmpty
                             ? null
-                            : bairroCtrl.text.trim()
-                        ..imobiliariaId = imobiliariaId;
+                            : bairroCtrl.text.trim();
 
                       // Salva localmente primeiro
                       try {
-                        print('Iniciando salvamento local...');
                         await ref.read(casaActionsProvider.notifier).save(m);
-                        print('Salvamento local concluído!');
 
-                        // Depois tenta salvar na API (se falhar, não tem problema)
-                        try {
-                          print('Tentando salvar na API...');
-                          final casaMap = {
-                            'descricao': m.descricao,
-                            'rua': m.rua,
-                            'numero': m.numero,
-                            'cep': m.cep,
-                            'bairro': m.bairro,
-                            'imobiliariaId': m.imobiliariaId,
-                          };
-                          await salvarCasa(casaMap);
-                          print('API: Sucesso!');
-                        } catch (e) {
-                          print('Falha ao salvar na API: $e');
-                        }
-
-                        print('Verificando mounted: $mounted');
                         if (mounted) {
-                          print('Executando Navigator.pop...');
                           Navigator.pop(context);
                         }
                       } catch (e, stackTrace) {
-                        print('Erro ao salvar localmente: $e');
-                        print('StackTrace: $stackTrace');
                         if (mounted) {
                           setState(() => _isSaving = false);
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                                content: Text('Erro ao salvar localmente: $e')),
+                            SnackBar(content: Text('Erro ao salvar: $e')),
                           );
                         }
                       }

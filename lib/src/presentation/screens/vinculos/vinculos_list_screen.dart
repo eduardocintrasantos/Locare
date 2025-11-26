@@ -86,17 +86,88 @@ class VinculosListScreen extends ConsumerWidget {
             separatorBuilder: (_, __) => const Divider(height: 1),
             itemBuilder: (_, i) {
               final Vinculo v = items[i];
+
+              // Buscar nomes
+              final casa = casas.firstWhere(
+                (c) => c.id == v.casaId,
+                orElse: () => Casa()..descricao = 'Casa não encontrada',
+              );
+              final imob = imobs.firstWhere(
+                (im) => im.id == v.imobiliariaId,
+                orElse: () =>
+                    Imobiliaria()..nome = 'Imobiliária não encontrada',
+              );
+              final loc = v.locatarioId == 0
+                  ? null
+                  : locs.firstWhere(
+                      (l) => l.id == v.locatarioId,
+                      orElse: () =>
+                          Locatario()..nome = 'Locatário não encontrado',
+                    );
+
+              final isAtivo = v.fim == null;
+              final inicioFormatado =
+                  '${v.inicio.day.toString().padLeft(2, '0')}/${v.inicio.month.toString().padLeft(2, '0')}/${v.inicio.year}';
+              final fimFormatado = v.fim != null
+                  ? '${v.fim!.day.toString().padLeft(2, '0')}/${v.fim!.month.toString().padLeft(2, '0')}/${v.fim!.year}'
+                  : null;
+
               return ListTile(
+                leading: Icon(
+                  isAtivo ? Icons.home : Icons.home_outlined,
+                  color: isAtivo ? Colors.green : Colors.grey,
+                ),
                 title: Text(
-                    'Casa #${v.casaId} • Imob #${v.imobiliariaId} • Loc #${v.locatarioId}'),
-                subtitle: Text('Início: ${v.inicio.toString().split(' ').first}'
-                    '${v.fim != null ? '  |  Fim: ${v.fim!.toString().split(' ').first}' : ''}'),
+                  casa.descricao,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isAtivo ? null : Colors.grey,
+                  ),
+                ),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '${imob.nome} • ${loc?.nome ?? 'Sem locatário'}',
+                      style: TextStyle(
+                        color: isAtivo ? null : Colors.grey,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Row(
+                      children: [
+                        Text(
+                          'Início: $inicioFormatado',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isAtivo ? Colors.grey[600] : Colors.grey,
+                          ),
+                        ),
+                        if (!isAtivo) ...[
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.red[100],
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Finalizado em $fimFormatado',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.red[700],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ],
+                ),
+                isThreeLine: true,
                 onTap: () => context.push('/vinculos/${v.id}'),
-                /*trailing: IconButton(
-                  icon: const Icon(Icons.delete_outline),
-                  onPressed: () =>
-                      ref.read(vinculoActionsProvider.notifier).remove(v.id),
-                ),*/
               );
             },
           );

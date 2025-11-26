@@ -1,10 +1,12 @@
 // src/data/repositories/casa_repo_supabase.dart
 // Implementação Supabase do repositório de Casa.
+// Nota: O vínculo com Imobiliária é feito apenas na tabela TVINCULOS.
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
 import '../../domain/entities/casa.dart';
 import '../../domain/repositories/casa_repo.dart';
+import '../../core/auth/auth_service.dart';
 
 final _log = Logger('CasaRepoSupabase');
 
@@ -13,15 +15,12 @@ class CasaRepoSupabase implements CasaRepo {
   final String _tableName = 'tcasas';
 
   @override
-  Future<List<Casa>> list({int? imobiliariaId}) async {
+  Future<List<Casa>> list() async {
     try {
-      var query = _supabase.from(_tableName).select();
-
-      if (imobiliariaId != null) {
-        query = query.eq('imobiliaria_id', imobiliariaId);
-      }
-
-      final response = await query.order('created_at', ascending: false);
+      final response = await _supabase
+          .from(_tableName)
+          .select()
+          .order('created_at', ascending: false);
 
       return (response as List).map((json) => _fromJson(json)).toList();
     } catch (e) {
@@ -57,7 +56,7 @@ class CasaRepoSupabase implements CasaRepo {
               'numero': model.numero,
               'cep': model.cep,
               'bairro': model.bairro,
-              'imobiliaria_id': model.imobiliariaId,
+              'usuario_id': AuthService.currentUserId,
             })
             .select()
             .single();
@@ -72,7 +71,6 @@ class CasaRepoSupabase implements CasaRepo {
           'numero': model.numero,
           'cep': model.cep,
           'bairro': model.bairro,
-          'imobiliaria_id': model.imobiliariaId,
           'updated_at': DateTime.now().toIso8601String(),
         }).eq('id', model.id);
 
@@ -104,7 +102,6 @@ class CasaRepoSupabase implements CasaRepo {
       ..numero = json['numero']
       ..cep = json['cep']
       ..bairro = json['bairro']
-      ..imobiliariaId = json['imobiliaria_id']
       ..createdAt = DateTime.parse(json['created_at'])
       ..updatedAt = json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])

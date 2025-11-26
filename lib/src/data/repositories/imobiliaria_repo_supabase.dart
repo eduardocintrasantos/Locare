@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
 import '../../domain/entities/imobiliaria.dart';
 import '../../domain/repositories/imobiliaria_repo.dart';
+import '../../core/auth/auth_service.dart';
 
 final _log = Logger('ImobiliariaRepoSupabase');
 
@@ -44,6 +45,11 @@ class ImobiliariaRepoSupabase implements ImobiliariaRepo {
   @override
   Future<int> upsert(Imobiliaria model) async {
     try {
+      final userId = AuthService.currentUserId;
+      if (userId == null) {
+        throw Exception('Usuário não está autenticado!');
+      }
+
       if (model.id == 0) {
         // Criar novo
         final response = await _supabase
@@ -57,6 +63,7 @@ class ImobiliariaRepoSupabase implements ImobiliariaRepo {
               'numero': model.numero,
               'telefone': model.telefone,
               'nome_contato': model.nomeContato,
+              'usuario_id': userId,
             })
             .select()
             .single();

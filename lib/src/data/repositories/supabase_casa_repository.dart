@@ -1,5 +1,6 @@
 // src/data/repositories/supabase_casa_repository.dart
 // Repositório para Casas usando Supabase
+// Nota: O vínculo com Imobiliária é feito apenas na tabela TVINCULOS.
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
@@ -40,22 +41,6 @@ class SupabaseCasaRepository {
     }
   }
 
-  // Buscar casas por imobiliária
-  Future<List<Casa>> getByImobiliaria(int imobiliariaId) async {
-    try {
-      final response = await _supabase
-          .from(_tableName)
-          .select()
-          .eq('imobiliaria_id', imobiliariaId)
-          .order('created_at', ascending: false);
-
-      return (response as List).map((json) => _fromJson(json)).toList();
-    } catch (e) {
-      log.severe('❌ Erro ao buscar casas da imobiliária #$imobiliariaId: $e');
-      rethrow;
-    }
-  }
-
   // Criar nova casa
   Future<Casa> create(Casa casa) async {
     try {
@@ -67,7 +52,6 @@ class SupabaseCasaRepository {
             'numero': casa.numero,
             'cep': casa.cep,
             'bairro': casa.bairro,
-            'imobiliaria_id': casa.imobiliariaId,
           })
           .select()
           .single();
@@ -91,7 +75,6 @@ class SupabaseCasaRepository {
             'numero': casa.numero,
             'cep': casa.cep,
             'bairro': casa.bairro,
-            'imobiliaria_id': casa.imobiliariaId,
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', casa.id)
@@ -126,7 +109,6 @@ class SupabaseCasaRepository {
       ..numero = json['numero']
       ..cep = json['cep']
       ..bairro = json['bairro']
-      ..imobiliariaId = json['imobiliaria_id']
       ..createdAt = DateTime.parse(json['created_at'])
       ..updatedAt = json['updated_at'] != null
           ? DateTime.parse(json['updated_at'])

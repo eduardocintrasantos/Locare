@@ -9,6 +9,7 @@ import '../../domain/repositories/locatario_repo.dart';
 import '../../domain/repositories/casa_repo.dart';
 import '_repos_provider.dart';
 import 'db_provider.dart';
+import 'auth_provider.dart';
 
 class DashboardResumo {
   final double totalPrevisto;
@@ -28,7 +29,8 @@ final dashboardSelectedMonthProvider =
     StateProvider<DateTime>((ref) => DateTime.now());
 
 final dashboardResumoMesProvider = FutureProvider<DashboardResumo>((ref) async {
-  //await ref.watch(isarProvider.future);
+  // Observa o refresh para recarregar quando usuário muda
+  ref.watch(dataRefreshProvider);
   final sel = ref.watch(dashboardSelectedMonthProvider);
   final ano = sel.year;
   final mes = sel.month;
@@ -84,7 +86,8 @@ class TaxaMes {
 }
 
 final dashboardUltimos12Provider = FutureProvider<List<TaxaMes>>((ref) async {
-  //await ref.watch(isarProvider.future);
+  // Observa o refresh para recarregar quando usuário muda
+  ref.watch(dataRefreshProvider);
   final vincRepo = ref.read(vinculoRepoProvider);
 
   final now = DateTime.now();
@@ -131,7 +134,8 @@ class ImobiliariaTaxa {
 
 final dashboardTaxaPorImobiliariaProvider =
     FutureProvider<List<ImobiliariaTaxa>>((ref) async {
-  //await ref.watch(isarProvider.future);
+  // Observa o refresh para recarregar quando usuário muda
+  ref.watch(dataRefreshProvider);
   final sel = ref.watch(dashboardSelectedMonthProvider);
   final ano = sel.year;
   final mes = sel.month;
@@ -178,6 +182,8 @@ class OpenFinanceItem {
 
 final dashboardAbertosAnterioresProvider =
     FutureProvider<List<OpenFinanceItem>>((ref) async {
+  // Observa o refresh para recarregar quando usuário muda
+  ref.watch(dataRefreshProvider);
   final sel = ref.watch(dashboardSelectedMonthProvider);
   final anoSel = sel.year;
   final mesSel = sel.month;
@@ -189,23 +195,30 @@ final dashboardAbertosAnterioresProvider =
 
   final result = <OpenFinanceItem>[];
 
-  // Itera sobre todos os meses anteriores ao mês selecionado (últimos 5 anos)
-  final startYear = anoSel - 5;
-  for (int y = startYear; y <= anoSel; y++) {
-    for (int m = 1; m <= 12; m++) {
-      // Pula meses iguais ou posteriores ao selecionado
-      if (y == anoSel && m >= mesSel) continue; // use continue, não break!
-      if (y > anoSel) break; // para no ano posterior
+  // Buscar vínculos apenas UMA vez (otimização importante!)
+  final vincs = await vincRepo.list();
+
+  // Cache de casas e imobiliárias para evitar múltiplas chamadas
+  final casasCache = <int, String>{};
+  final imobsCache = <int, String>{};
+
+  // Limitar a busca aos últimos 12 meses (não 5 anos!)
+  final startDate = DateTime(anoSel, mesSel - 12, 1);
+
+  for (int y = startDate.year; y <= anoSel; y++) {
+    final startMonth = (y == startDate.year) ? startDate.month : 1;
+    final endMonth = (y == anoSel) ? mesSel - 1 : 12;
+
+    for (int m = startMonth; m <= endMonth; m++) {
+      if (m < 1 || m > 12) continue;
 
       final primeiro = DateTime(y, m, 1);
       final ultimo = DateTime(y, m + 1, 0);
 
-      // Busca todos os vínculos ativos naquele mês
-      final vincs = await vincRepo.list();
       for (final v in vincs) {
         final iniOk = !v.inicio.isAfter(ultimo);
         final fimOk = (v.fim == null) || !v.fim!.isBefore(primeiro);
-        if (!iniOk || !fimOk) continue; // não estava ativo naquele mês
+        if (!iniOk || !fimOk) continue;
 
         // Verifica se há pagamento registrado para este vínculo/ano/mês
         final pg = await pgRepo.getByVinculoAnoMes(v.id, y, m);
@@ -213,12 +226,20 @@ final dashboardAbertosAnterioresProvider =
 
         // Se não foi recebido, adiciona à lista de abertos
         if (!recebido) {
-          final casa = await casaRepo.getById(v.casaId);
-          final imob = await imobRepo.getById(v.imobiliariaId);
+          // Usar cache para evitar múltiplas chamadas
+          if (!casasCache.containsKey(v.casaId)) {
+            final casa = await casaRepo.getById(v.casaId);
+            casasCache[v.casaId] = casa?.descricao ?? 'Casa #${v.casaId}';
+          }
+          if (!imobsCache.containsKey(v.imobiliariaId)) {
+            final imob = await imobRepo.getById(v.imobiliariaId);
+            imobsCache[v.imobiliariaId] =
+                imob?.nome ?? 'Imob #${v.imobiliariaId}';
+          }
 
           result.add(OpenFinanceItem(
-            casaNome: casa?.descricao ?? 'Casa #${v.casaId}',
-            imobiliariaNome: imob?.nome ?? 'Imob #${v.imobiliariaId}',
+            casaNome: casasCache[v.casaId]!,
+            imobiliariaNome: imobsCache[v.imobiliariaId]!,
             valor: v.valorAluguel ?? 0,
             ano: y,
             mes: m,

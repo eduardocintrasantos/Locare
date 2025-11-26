@@ -1,17 +1,18 @@
 // src/presentation/providers/casa_providers.dart
-// Lista com filtro por imobiliariaId e ações.
+// Lista de casas e ações.
+// Nota: O vínculo com Imobiliária é feito na tabela TVINCULOS.
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../domain/entities/casa.dart';
 import '../../domain/repositories/casa_repo.dart';
 import '_repos_provider.dart';
-
-final casasFiltroImobiliariaProvider = StateProvider<int?>((_) => null);
+import 'auth_provider.dart';
 
 final casasListProvider = FutureProvider<List<Casa>>((ref) async {
+  // Observa o refresh para recarregar quando usuário muda
+  ref.watch(dataRefreshProvider);
   final repo = ref.read(casaRepoProvider);
-  final imId = ref.watch(casasFiltroImobiliariaProvider);
-  return repo.list(imobiliariaId: imId);
+  return repo.list();
 });
 
 class CasaActions extends StateNotifier<AsyncValue<void>> {

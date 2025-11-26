@@ -9,11 +9,21 @@ final log = Logger('AuthService');
 class AuthService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  // Singleton para acesso fácil ao userId
+  static AuthService? _instance;
+  static AuthService get instance => _instance ??= AuthService();
+
   // Retorna o usuário atual logado (ou null)
   User? get currentUser => _supabase.auth.currentUser;
 
   // Verifica se está autenticado
   bool get isAuthenticated => currentUser != null;
+
+  // Pegar ID do usuário atual
+  String? get userId => currentUser?.id;
+
+  // Método estático para acesso rápido ao userId
+  static String? get currentUserId => instance.userId;
 
   // Login com email e senha
   Future<AuthResponse?> login({
@@ -50,7 +60,4 @@ class AuthService {
 
   // Stream de mudanças de autenticação
   Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
-
-  // Pegar ID do usuário atual
-  String? get userId => currentUser?.id;
 }

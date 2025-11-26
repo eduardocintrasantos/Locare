@@ -18,7 +18,6 @@ import '../../../core/formz_inputs/money_input.dart';
 import '../../../core/formz_inputs/percent_input.dart';
 import '../../../core/utils/id.dart';
 import '../../providers/_repos_provider.dart';
-import '../../../data/api/post/vinculo.dart';
 
 class VinculoFormScreen extends ConsumerStatefulWidget {
   final int? id;
@@ -142,40 +141,40 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
     final locs = ref.watch(locatariosListProvider).value ?? [];
     final vinculos = ref.watch(vinculosListProvider).value ?? [];
 
-    // IDs de casas e locatários com vínculos ATIVOS (fim = null)
-    final casasComVinculoAtivo = <int>{};
-    final locatariosComVinculoAtivo = <int>{};
+    // Filtra casas e locatários disponíveis (sem vínculo ativo)
+    // Exclui o vínculo atual da verificação para não bloquear a própria casa/locatário
+    final currentVinculoId = _loaded?.id;
+
+    final casasComVinculoAtivoExcetoAtual = <int>{};
+    final locatariosComVinculoAtivoExcetoAtual = <int>{};
 
     for (final v in vinculos) {
-      if (v.fim == null) {
-        // vínculo ativo
-        casasComVinculoAtivo.add(v.casaId);
-        // ignora locatário placeholder (0)
-        if (v.locatarioId != 0) locatariosComVinculoAtivo.add(v.locatarioId);
+      if (v.fim == null && v.id != currentVinculoId) {
+        casasComVinculoAtivoExcetoAtual.add(v.casaId);
+        if (v.locatarioId != 0) {
+          locatariosComVinculoAtivoExcetoAtual.add(v.locatarioId);
+        }
       }
     }
 
-    // Filtra casas e locatários disponíveis (sem vínculo ativo)
-    final casasDisponivel =
-        casas.where((c) => !casasComVinculoAtivo.contains(c.id)).toList();
-    final locsDisponivel =
-        locs.where((l) => !locatariosComVinculoAtivo.contains(l.id)).toList();
+    final casasDisponivel = casas
+        .where((c) => !casasComVinculoAtivoExcetoAtual.contains(c.id))
+        .toList();
+    final locsDisponivel = locs
+        .where((l) => !locatariosComVinculoAtivoExcetoAtual.contains(l.id))
+        .toList();
 
-    // Se estiver editando, sempre permite a casa e locatário atuais
-    if (_loaded != null) {
-      // Adiciona a casa atual se não estiver na lista
-      if (casaId != null && !casasDisponivel.any((c) => c.id == casaId)) {
-        final casa = casas.firstWhere((c) => c.id == casaId,
-            orElse: () => Casa()..id = 0);
-        if (casa.id != 0) casasDisponivel.add(casa);
-      }
-      // Adiciona o locatário atual se houver um e não estiver na lista
-      if (locatarioId != null &&
-          !locsDisponivel.any((l) => l.id == locatarioId)) {
-        final loc = locs.firstWhere((l) => l.id == locatarioId,
-            orElse: () => Locatario()..id = 0);
-        if (loc.id != 0) locsDisponivel.add(loc);
-      }
+    // Garante que o valor selecionado sempre esteja na lista (evita erro do Dropdown)
+    if (casaId != null && !casasDisponivel.any((c) => c.id == casaId)) {
+      final casa =
+          casas.firstWhere((c) => c.id == casaId, orElse: () => Casa()..id = 0);
+      if (casa.id != 0) casasDisponivel.add(casa);
+    }
+    if (locatarioId != null &&
+        !locsDisponivel.any((l) => l.id == locatarioId)) {
+      final loc = locs.firstWhere((l) => l.id == locatarioId,
+          orElse: () => Locatario()..id = 0);
+      if (loc.id != 0) locsDisponivel.add(loc);
     }
 
     Widget _infoCasa() {
@@ -431,7 +430,6 @@ class _VinculoFormScreenState extends ConsumerState<VinculoFormScreen> {
                                 'inicio': v.inicio.toIso8601String(),
                                 'fim': v.fim?.toIso8601String(),
                               };
-                              await salvarVinculo(vinculoMap);
                             } catch (e) {
                               print('Falha ao salvar na API: $e');
                             }

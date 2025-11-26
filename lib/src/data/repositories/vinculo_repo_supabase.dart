@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:logging/logging.dart';
 import '../../domain/entities/vinculo.dart';
 import '../../domain/repositories/vinculo_repo.dart';
+import '../../core/auth/auth_service.dart';
 
 final _log = Logger('VinculoRepoSupabase');
 
@@ -91,6 +92,7 @@ class VinculoRepoSupabase implements VinculoRepo {
               'taxa_valor': model.taxaValor,
               'inicio': model.inicio.toIso8601String(),
               'fim': model.fim?.toIso8601String(),
+              'usuario_id': AuthService.currentUserId,
             })
             .select()
             .single();
